@@ -21,7 +21,22 @@
 
 
 ## Itung Manual
-### Targel Potential Field
+### Obstacle Potential Field
+Drone 1 position = 0,0,0
+Drone 1 mass = 1
+Target 1 position = 9,9,9
+gain = 1
+target detecting range = 1
+damping factor = 1
+
+-- Iterasi 1 --
+Obstacle Potential Force 
+= ((1/15.5884572681 - 1/1)*1/(15.5884572681^2) 
+-
+1*(15.5884572681 - 1)) * (0.57735026919, ..., ...)
+=
+
+### Target Potential Field
 Drone 1 position = 0,0,0
 Drone 1 mass = 1
 Target 1 position = 9,9,9
