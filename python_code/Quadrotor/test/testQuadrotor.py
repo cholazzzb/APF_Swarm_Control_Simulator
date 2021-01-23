@@ -2,6 +2,7 @@ import sys
 sys.path.append('../')
 from Quadrotor import Quadrotor
 from Report import Report
+from Simulator import Simulator
 import matplotlib.pyplot as plt
 import math
 
@@ -25,15 +26,6 @@ Tello2 = Quadrotor("Tello2", specs, initialState2, initialInput, attitudeControl
 Report1 = Report(Tello1)
 Report2 = Report(Tello2)
 
-tello1State = Tello1.getState()
-tello2State = Tello2.getState()
-
-tello1BodyPosition = Tello1.getBodyPosition()
-# Position Arena
-tello1X = [tello1State[0][0]]
-tello1Y = [tello1State[0][1]]
-tello1Z = [tello1State[0][2]]
-
 # Show Quadrotor moving
 plt.ion()
 quadrotorView = plt.figure()
@@ -43,20 +35,22 @@ quadrotorArena.set_xlabel('X (meter)')
 quadrotorArena.set_ylabel('Y (meter)')
 quadrotorArena.set_zlabel('Z (meter)')
 
-quadrotorArena.set_xlim(-5, 5)
-quadrotorArena.set_ylim(-5, 5)
+quadrotorArena.set_xlim(-10, 10)
+quadrotorArena.set_ylim(-10, 10)
 quadrotorArena.set_zlim(-2, 3)
 
-drone1 = quadrotorArena.scatter(tello1X, tello1Y, tello1Z, color='red')
-drone1BodyData = Tello1.getBodyPosition()
-drone1Body = quadrotorArena.scatter(
-    drone1BodyData[0], drone1BodyData[1], drone1BodyData[2], color='blue')
+# Build quadrotor in simulator
+drone1Simulator = Simulator(Tello1, quadrotorArena)
+drone2Simulator = Simulator(Tello2, quadrotorArena)
+drone1Simulator.initialDrawing("red", "blue")
+drone2Simulator.initialDrawing("yellow", "green")
+
 quadrotorView.show()
 
 for i in range(200):
     print('-------Time:', Tello1.t, '-------')
-    tello1State = Tello1.getState()
-    tello2State = Tello2.getState()
+    print('---------------------------------')
+
     # [phi, theta, psi, zdot] (degree)
     Tello1.controlAttitude(
         [5*degreeToRadian, 5*degreeToRadian, 0*degreeToRadian, 5])
@@ -68,23 +62,14 @@ for i in range(200):
     Tello2.updateState()
 
     # Plot Data
-    tello1State = Tello1.getState()
-    tello1BodyPosition = Tello1.getBodyPosition()
-    Report1.updateReport(tello1State, Tello1.thrust, Tello1.moments)   
-    Report2.updateReport(tello2State, Tello2.thrust, Tello2.moments)
-
-    print('---------------------------------')
+    Report1.updateReport(Tello1.getState(), Tello1.thrust, Tello1.moments)   
+    Report2.updateReport(Tello2.getState(), Tello2.thrust, Tello2.moments)
 
     # Quadrotor View
-    plt.pause(0.1)
-
-    drone1._offsets3d = ([tello1State[0][0]], [
-                         tello1State[0][1]], [tello1State[0][2]])
-    drone1Body._offsets3d = (
-        tello1BodyPosition[0], tello1BodyPosition[1], tello1BodyPosition[2])
-
-    plt.draw()
-
+    drone1Simulator.updateDrawing()
+    drone2Simulator.updateDrawing()
+    
 Report1.generateReport()
 Report2.generateReport()
+
 plt.pause(100)
