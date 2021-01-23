@@ -9,16 +9,17 @@ class Quadrotor(object):
 
         self.mass = specs["mass"]
         self.inertia = specs["inertia"]  # [Ixx, Iyy, Izz]
+        self.armLength = specs["armLength"]
 
         # Quadrotor Initial State
-        self.position = np.array(initialState[0])
-        self.position_dot = np.array(initialState[1])
-        self.angles = np.array(initialState[2])  # [phi theta psi]
-        self.angles_dot = np.array(initialState[3])
+        self.position = np.array(initialState[0], dtype=float)
+        self.position_dot = np.array(initialState[1], dtype=float)
+        self.angles = np.array(initialState[2], dtype=float)  # [phi theta psi]
+        self.angles_dot = np.array(initialState[3], dtype=float)
         self.state_dot = np.array([[0, 0, 0],  # position_dot
                                    [0, 0, 0],  # position_dot_dot
                                    [0, 0, 0],  # angles_dot
-                                   [0, 0, 0]])  # angles_dot_dot
+                                   [0, 0, 0]], dtype=float)  # angles_dot_dot
 
         # Initiate Controlled Variable
         self.torque = initialInput[0]
@@ -59,6 +60,29 @@ class Quadrotor(object):
 
     def getState(self):
         return [self.position, self.position_dot, self.angles, self.angles_dot]
+
+    def getBodyPosition(self):
+
+        # Quadrotor Body (Rotor), format: ([x,y,z])
+        # Assumsi : psi always zero
+
+        # direction : +x
+        rotor1 = [self.position[0] + math.cos(self.angles[1])*self.armLength, self.position[1],
+                  self.position[2] - math.sin(self.angles[1])*self.armLength]
+
+        # direction : -x
+        rotor2 = [self.position[0] - math.cos(self.angles[1])*self.armLength, self.position[1],
+                  self.position[2] + math.sin(self.angles[1])*self.armLength]
+
+        # direction : +y
+        rotor3 = [self.position[0], self.position[1] + math.cos(
+            self.angles[0]) * self.armLength, self.position[2] + math.sin(self.angles[0])*self.armLength]
+
+        # direction : -y
+        rotor4 = [self.position[0], self.position[1] - math.cos(
+            self.angles[0]) * self.armLength, self.position[2] - math.sin(self.angles[0])*self.armLength]
+
+        return np.array([[rotor1[0], rotor2[0], rotor3[0], rotor4[0]], [rotor1[1], rotor2[1], rotor3[1], rotor4[1]], [rotor1[2], rotor2[2], rotor3[2], rotor4[2]]])
 
     def updateState(self):
         self.t = self.t + self.dt
@@ -103,9 +127,9 @@ class Quadrotor(object):
         # Add sensor noise with white noise
 
     def controlAttitude(self, attitudeTarget):
-        self.phi_err = attitudeTarget[1] - self.angles[0]
-        self.theta_err = attitudeTarget[2] - self.angles[1]
-        self.psi_err = attitudeTarget[3] - self.angles[2]
+        self.phi_err = attitudeTarget[0] - self.angles[0]
+        self.theta_err = attitudeTarget[1] - self.angles[1]
+        self.psi_err = attitudeTarget[2] - self.angles[2]
 
         # Calculate output for controlled variable
         '''
@@ -130,8 +154,15 @@ class Quadrotor(object):
         self.psi_err_prev = self.psi_err
         self.psi_err_sum = self.psi_err_sum + self.psi_err
 
-        self.zdot_err = attitudeTarget[0] - self.position_dot[2]
+        self.zdot_err = attitudeTarget[3] - self.position_dot[2]
         self.torque = self.mass * 9.81 - (self.KP_zdot * self.zdot_err + self.KI_zdot *
-                                      self.zdot_err_sum + self.KD_zdot*(self.zdot_err - self.zdot_err_prev)/self.dt)
+                                          self.zdot_err_sum + self.KD_zdot*(self.zdot_err - self.zdot_err_prev)/self.dt)
         self.zdot_err_prev = self.zdot_err
         self.zdot_err_sum = self.zdot_err_sum + self.zdot_err
+
+    def controlPosition(self):
+        return 'in progress'
+
+    def controlSwarm(self):
+        # with APF
+        return 'in progress'
