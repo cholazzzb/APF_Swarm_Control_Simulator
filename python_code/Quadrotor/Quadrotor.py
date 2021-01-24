@@ -158,6 +158,7 @@ class Quadrotor(object):
         self.zdot_err = attitudeTarget[3] - self.position_dot[2]
         self.thrust = self.mass * 9.81 - (self.KP_zdot * self.zdot_err + self.KI_zdot *
                                           self.zdot_err_sum + self.KD_zdot*(self.zdot_err - self.zdot_err_prev)/self.dt)
+        
         self.zdot_err_prev = self.zdot_err
         self.zdot_err_sum = self.zdot_err_sum + self.zdot_err
 
