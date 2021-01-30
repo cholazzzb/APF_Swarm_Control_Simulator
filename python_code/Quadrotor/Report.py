@@ -1,4 +1,7 @@
 import matplotlib.pyplot as plt
+import math
+
+radianToDegree = 180/math.pi
 
 # Specific for quadrotor
 class Report(object):
@@ -9,9 +12,9 @@ class Report(object):
         self.xLabel = [0]
 
         # Controlled Variables
-        self.phi = [Quadrotor.angles[0]]
-        self.theta = [Quadrotor.angles[1]]
-        self.psi = [Quadrotor.angles[2]]
+        self.phi = [Quadrotor.angles[0]*radianToDegree]
+        self.theta = [Quadrotor.angles[1]*radianToDegree]
+        self.psi = [Quadrotor.angles[2]*radianToDegree]
 
         self.z_dot = [Quadrotor.position_dot[2]]
 
@@ -25,9 +28,9 @@ class Report(object):
         self.y_dot = [Quadrotor.position_dot[1]]
 
         # Angular Velocity
-        self.phi_dot = [Quadrotor.angles_dot[0]]
-        self.theta_dot = [Quadrotor.angles_dot[1]]
-        self.psi_dot = [Quadrotor.angles_dot[2]]
+        self.phi_dot = [Quadrotor.angles_dot[0]*radianToDegree]
+        self.theta_dot = [Quadrotor.angles_dot[1]*radianToDegree]
+        self.psi_dot = [Quadrotor.angles_dot[2]*radianToDegree]
 
         # Thrust and Moment
         self.thrust = [Quadrotor.thrust]
@@ -71,93 +74,72 @@ class Report(object):
         plt.style.use('dark_background')
 
         # Controlled Variable
-        plt.figure()
+        report = plt.figure()
         plt.get_current_fig_manager().full_screen_toggle()
 
-        plt.suptitle(self.name + " Controlled Variables")
-        plt.subplot(4, 1, 1)
-        plt.ylabel('phi(degree)')
-        plt.plot(self.xLabel, self.phi)
-
-        plt.subplot(4, 1, 2)
-        plt.ylabel('theta(degree)')
-        plt.plot(self.xLabel, self.theta)
-
-        plt.subplot(4, 1, 3)
-        plt.ylabel('psi(degree)')
-        plt.plot(self.xLabel, self.psi)
-
-        plt.subplot(4, 1, 4)
-        plt.ylabel('z dot(m/s)')
-        plt.plot(self.xLabel, self.z_dot)
-
-        # Position
-        plt.figure()
-        plt.get_current_fig_manager().full_screen_toggle()
-
-        plt.suptitle(self.name + " Position")
-
-        plt.subplot(3, 1, 1)
+        plt.suptitle(self.name + " States - Thrust and Moment")
+        
+        plt.subplot(4, 4, 1)
         plt.ylabel('X (m)')
         plt.plot(self.xLabel, self.x)
 
-        plt.subplot(3, 1, 2)
+        plt.subplot(4, 4, 2)
         plt.ylabel('Y (m)')
         plt.plot(self.xLabel, self.y)
 
-        plt.subplot(3, 1, 3)
+        plt.subplot(4, 4, 3)
         plt.ylabel('Z (m)')
         plt.plot(self.xLabel, self.z)
 
-        # Testing
-
-        plt.figure()
-        plt.get_current_fig_manager().full_screen_toggle()
-
-        plt.suptitle(self.name + " Velocity")
-
-        plt.subplot(2, 1, 1)
+        plt.subplot(4, 4, 5)
         plt.ylabel('X dot (m)')
         plt.plot(self.xLabel, self.x_dot)
 
-        plt.subplot(2, 1, 2)
+        plt.subplot(4, 4, 6)
         plt.ylabel('Y dot (m)')
         plt.plot(self.xLabel, self.y_dot)
 
-        plt.figure()
-        plt.get_current_fig_manager().full_screen_toggle()
+        plt.subplot(4, 4, 7)
+        plt.ylabel('z dot(m/s)')
+        plt.plot(self.xLabel, self.z_dot)
 
-        plt.suptitle(self.name + " Anglular Velocity")
+        plt.subplot(4, 4, 9)
+        plt.ylabel('phi(degree)')
+        plt.plot(self.xLabel, self.phi)
 
-        plt.subplot(3, 1, 1)
+        plt.subplot(4, 4, 10)
+        plt.ylabel('theta(degree)')
+        plt.plot(self.xLabel, self.theta)
+
+        plt.subplot(4, 4, 11)
+        plt.ylabel('psi(degree)')
+        plt.plot(self.xLabel, self.psi)
+
+        plt.subplot(4, 4, 13)
         plt.ylabel('phi dot(degree)')
         plt.plot(self.xLabel, self.phi_dot)
 
-        plt.subplot(3, 1, 2)
+        plt.subplot(4, 4, 14)
         plt.ylabel('theta dot(degree)')
         plt.plot(self.xLabel, self.theta_dot)
 
-        plt.subplot(3, 1, 3)
+        plt.subplot(4, 4, 15)
         plt.ylabel('psi dot(degree)')
         plt.plot(self.xLabel, self.psi_dot)
 
-        plt.figure()
-        plt.get_current_fig_manager().full_screen_toggle()
-        plt.suptitle(self.name + " Moment")
-
-        plt.subplot(4, 1, 1)
+        plt.subplot(4, 4, 4)
         plt.ylabel('thrust')
         plt.plot(self.xLabel, self.thrust)
 
-        plt.subplot(4, 1, 2)
+        plt.subplot(4, 4, 8)
         plt.ylabel('moment1')
         plt.plot(self.xLabel, self.moment1)
 
-        plt.subplot(4, 1, 3)
+        plt.subplot(4, 4, 12)
         plt.ylabel('moment2')
         plt.plot(self.xLabel, self.moment2)
 
-        plt.subplot(4, 1, 4)
+        plt.subplot(4, 4, 16)
         plt.ylabel('moment3')
         plt.plot(self.xLabel, self.moment3)
 
