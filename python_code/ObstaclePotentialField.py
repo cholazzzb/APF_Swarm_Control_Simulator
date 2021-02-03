@@ -1,6 +1,5 @@
-from pylab import *
 import math
-from tupleUtil import *
+from tupleUtil import minusWithTuple, timesWithInteger
 
 
 class ObstaclePotentialField(object):
@@ -12,7 +11,7 @@ class ObstaclePotentialField(object):
     def calculate_obstacle_force(self, agent_index, obstacle_index, Agents, Obstacles):
         distance_tuple = minusWithTuple(
             Agents[agent_index].position, Obstacles[obstacle_index].position)
-        distance = sqrt(abs(sum(tuple(pow(x, 2) for x in distance_tuple))))
+        distance = math.sqrt(abs(sum(tuple(pow(x, 2) for x in distance_tuple))))
         if distance <= self.detecting_range:
             return timesWithInteger(distance_tuple, (
                 (1/distance - 1/self.detecting_range) *
@@ -28,7 +27,7 @@ class ObstaclePotentialField(object):
         for Agent in Agents:
             distance_tuple = minusWithTuple(
             Agent.position, Obstacle.position)
-            distance = sqrt(abs(sum(tuple(pow(x, 2) for x in distance_tuple))))
+            distance = math.sqrt(abs(sum(tuple(pow(x, 2) for x in distance_tuple))))
             if distance <= self.detecting_range:
                 obstacles_forces.append(timesWithInteger(distance_tuple, (
                     (1/distance - 1/self.detecting_range) *

@@ -2,33 +2,44 @@ import math
 import numpy as np
 import random
 
+import sys
+sys.path.append('../../')
+from TargetPotentialField import TargetPotentialField
+from Target import Target
+from ObstaclePotentialField import ObstaclePotentialField
+from Obstacle import Obstacle
+from Agent import Agent
+
 radianToDegree = 180/math.pi
 degreeToRadian = math.pi/180
 
 
 class Quadrotor(object):
-    def __init__(self, name, specs, initialState, initialInput, attitudeControllerPID, positionControllerPID):
+    def __init__(self, index, name, specs, initialState, initialInput, attitudeControllerPID, positionControllerPID):
+        self.index = index
         self.name = name
-        self.t = 0 # s
-        self.dt = 0.01 # s
+        self.t = 0  # s
+        self.dt = 0.01  # s
 
-        self.mass = specs["mass"] # kg
+        self.mass = specs["mass"]  # kg
         self.inertia = specs["inertia"]  # [Ixx, Iyy, Izz] # kg m^2
-        self.armLength = specs["armLength"] #, m
+        self.armLength = specs["armLength"]  # , m
 
         # Quadrotor Initial State
-        self.position = np.array(initialState[0], dtype=float) # m
-        self.position_dot = np.array(initialState[1], dtype=float) # m/s
-        self.angles = np.array(initialState[2], dtype=float)  # [phi theta psi] # rad
-        self.angles_dot = np.array(initialState[3], dtype=float) # rad / s
+        self.position = np.array(initialState[0], dtype=float)  # m
+        self.position_dot = np.array(initialState[1], dtype=float)  # m/s
+        # [phi theta psi] # rad
+        self.angles = np.array(initialState[2], dtype=float)
+        self.angles_dot = np.array(initialState[3], dtype=float)  # rad / s
         self.state_dot = np.array([[0, 0, 0],  # position_dot
                                    [0, 0, 0],  # position_dot_dot
                                    [0, 0, 0],  # angles_dot
                                    [0, 0, 0]], dtype=float)  # angles_dot_dot
 
         # Initiate Controlled Variable
-        self.thrust = initialInput[0] # kg m rad^2/s^2
-        self.moments = [initialInput[1], initialInput[2], initialInput[3]] # kg m^2 rad^2/s^2
+        self.thrust = initialInput[0]  # kg m rad^2/s^2
+        self.moments = [initialInput[1], initialInput[2],
+                        initialInput[3]]  # kg m^2 rad^2/s^2
 
         self.thrust_max = 60
         self.thrust_min = 0
@@ -115,12 +126,15 @@ class Quadrotor(object):
         self.z_pos_err = 0
         self.z_pos_err_sum = 0
 
+        # Swarm Control
+        self.targetPosition = []
+
     def calculateFrictionForce(self, velocity):
-        if velocity>0 :
-            print('friction Force', -5*(velocity**2))
+        if velocity > 0:
+            # print('friction Force', -5*(velocity**2))
             return -10*(velocity**2)
         else:
-            print('friction Force', 5*(velocity**2))
+            # print('friction Force', 5*(velocity**2))
             return 10*(velocity**2)
 
     def generateNoise(self):
@@ -140,7 +154,7 @@ class Quadrotor(object):
         # direction : -x
         rotor2 = [self.position[0] - math.cos(self.angles[1])*self.armLength - math.cos(self.angles[2])*self.armLength, self.position[1] + math.sin(self.angles[2])*self.armLength,
                   self.position[2] - math.sin(self.angles[1])*self.armLength]
-        
+
         # direction : +y
         rotor3 = [self.position[0] + math.sin(self.angles[2])*self.armLength, self.position[1] + math.cos(
             self.angles[0]) * self.armLength + math.cos(self.angles[2])*self.armLength, self.position[2] - math.sin(self.angles[0])*self.armLength]
@@ -152,12 +166,12 @@ class Quadrotor(object):
         return np.array([[rotor1[0], rotor2[0], rotor3[0], rotor4[0]], [rotor1[1], rotor2[1], rotor3[1], rotor4[1]], [rotor1[2], rotor2[2], rotor3[2], rotor4[2]]])
 
     def updateState(self):
-        self.t = self.t + self.dt
+        self.t = round(self.t + self.dt, 3)
 
         # Evaluate Equation of Motions
         phi = self.angles[0]
         theta = self.angles[1]
-        psi = self.angles[2]      
+        psi = self.angles[2]
 
         if self.thrust > self.thrust_max:
             self.thrust = self.thrust_max
@@ -172,14 +186,15 @@ class Quadrotor(object):
 
         # Translational Motion
         self.state_dot[0] = self.position_dot
-        self.state_dot[1][0] = -1/self.mass*((math.sin(psi)*math.sin(
-            phi)+math.cos(psi)*math.sin(theta)*math.cos(phi))*self.thrust - self.calculateFrictionForce(self.position_dot[0]))
+        self.state_dot[1][0] = 1/self.mass*((math.sin(psi)*math.sin(
+            phi)+math.cos(psi)*math.sin(theta)*math.cos(phi))*self.thrust + self.calculateFrictionForce(self.position_dot[0]))
         self.state_dot[1][1] = -1/self.mass*((-math.cos(psi)*math.sin(
             phi)+math.sin(psi)*math.sin(theta)*math.cos(phi))*self.thrust - self.calculateFrictionForce(self.position_dot[1]))
         self.state_dot[1][2] = 1/self.mass * \
-            (math.cos(theta)*math.cos(phi))*self.thrust - 9.81 + self.calculateFrictionForce(self.position_dot[2])/self.mass
+            (math.cos(theta)*math.cos(phi))*self.thrust - 9.81 + \
+            self.calculateFrictionForce(self.position_dot[2])/self.mass
 
-        print('acceleration', self.state_dot[1])
+        # print('acceleration', self.state_dot[1])
 
         # Rotational Motion
         p = self.angles_dot[0]
@@ -240,116 +255,132 @@ class Quadrotor(object):
         self.z_dot_err = attitudeTarget[3] - self.position_dot[2]
 
         self.thrust = (self.KP_zdot * self.z_dot_err + self.KI_zdot *
-                                          self.z_dot_err_sum + self.KD_zdot*(self.z_dot_err - self.z_dot_err_prev)/self.dt)
+                       self.z_dot_err_sum + self.KD_zdot*(self.z_dot_err - self.z_dot_err_prev)/self.dt)
 
         self.z_dot_err_prev = self.z_dot_err
         self.z_dot_err_sum = self.z_dot_err_sum + self.z_dot_err
 
     def controlPosition(self, positionTarget):
         # Keknya bener
-        # self.x_err = positionTarget[0] - self.position[0]
-        # self.y_err = positionTarget[1] - self.position[1]
-        # self.z_err = positionTarget[2] - self.position[2]
+        self.x_err = positionTarget[0] - self.position[0]
+        self.y_err = positionTarget[1] - self.position[1]
+        self.z_err = positionTarget[2] - self.position[2]
 
-        # attitudeTarget = [0,0,0,0] # psi theta phi zdot
-        # attitudeTarget[0] = self.KP_y * self.y_err
-        # + self.KI_y * self.y_err_sum
-        # + self.KD_y * (self.y_err - self.y_err_prev) / self.dt
+        attitudeTarget = [0, 0, 0, 0]  # psi theta phi zdot
+        attitudeTarget[0] = self.KP_y * self.y_err
+        + self.KI_y * self.y_err_sum
+        + self.KD_y * (self.y_err - self.y_err_prev) / self.dt
 
-        # self.y_err_prev = self.y_err
-        # self.y_err_sum = self.y_err_sum + self.y_err
+        self.y_err_prev = self.y_err
+        self.y_err_sum = self.y_err_sum + self.y_err
 
-        # attitudeTarget[1] = self.KP_x * self.x_err
-        # + self.KI_x * self.x_err_sum
-        # + self.KD_x * (self.x_err - self.x_err_prev) / self.dt
+        attitudeTarget[1] = self.KP_x * self.x_err
+        + self.KI_x * self.x_err_sum
+        + self.KD_x * (self.x_err - self.x_err_prev) / self.dt
 
-        # self.x_err_prev = self.x_err
-        # self.x_err_sum = self.x_err_sum + self.x_err
+        self.x_err_prev = self.x_err
+        self.x_err_sum = self.x_err_sum + self.x_err
 
-        # attitudeTarget[3] = self.KP_z * self.z_err
-        # + self.KI_z * self.z_err_sum
-        # + self.KD_z * (self.z_err - self.z_err_prev) / self.dt
+        attitudeTarget[3] = self.KP_z * self.z_err
+        + self.KI_z * self.z_err_sum
+        + self.KD_z * (self.z_err - self.z_err_prev) / self.dt
 
-        # self.z_err_prev = self.z_err
-        # self.z_err_sum = self.z_err_sum + self.z_err
+        self.z_err_prev = self.z_err
+        self.z_err_sum = self.z_err_sum + self.z_err
 
         # print('Degree : ', self.getState()[2])
         # print('Attitude Target', attitudeTarget)
 
-        # self.controlAttitude(attitudeTarget)
+        self.controlAttitude(attitudeTarget)
 
-        # Control y pos
-        self.y_err = positionTarget[1] - self.position[1] # / m
+        # # Control y pos
+        # self.y_err = positionTarget[1] - self.position[1] # / m
 
-        y_des_dot = (self.y_err)/self.dt # m/s
-        self.y_dot_err = y_des_dot - self.position_dot[1] # m/s
+        # y_des_dot = (self.y_err)/self.dt # m/s
+        # self.y_dot_err = y_des_dot - self.position_dot[1] # m/s
 
-        self.phi_pos_err = self.KP_y*self.y_err + self.KI_y * self.y_err_sum + \
-            self.KD_y*(y_des_dot - self.position_dot[1]) - self.angles[0]
-        self.moments[0] = self.KP_phi * (self.phi_pos_err)
-        + self.KI_phi*(self.phi_pos_err_sum) + \
-            self.KD_phi * (self.KP_y*self.y_dot_err + self.KI_y*self.y_dot_err_sum+self.KD_phi * ((y_des_dot -
-                                                                                                   self.y_des_dot_prev)/self.dt - (self.position_dot[1] - self.y_dot_prev)/self.dt) - self.angles_dot[1])
-        self.y_dot_prev = self.position_dot[1]
-        self.y_des_dot_prev = y_des_dot
+        # self.phi_pos_err = self.KP_y*self.y_err + self.KI_y * self.y_err_sum + \
+        #     self.KD_y*(y_des_dot - self.position_dot[1]) - self.angles[0]
+        # self.moments[0] = self.KP_phi * (self.phi_pos_err)
+        # + self.KI_phi*(self.phi_pos_err_sum) + \
+        #     self.KD_phi * (self.KP_y*self.y_dot_err + self.KI_y*self.y_dot_err_sum+self.KD_phi * ((y_des_dot -
+        #                                                                                            self.y_des_dot_prev)/self.dt - (self.position_dot[1] - self.y_dot_prev)/self.dt) - self.angles_dot[1])
+        # self.y_dot_prev = self.position_dot[1]
+        # self.y_des_dot_prev = y_des_dot
 
-        self.y_err_prev = self.y_err
-        self.y_err_sum = self.y_err_sum + self.y_err
-        self.y_dot_err_sum = self.y_dot_err_sum + self.y_dot_err
+        # self.y_err_prev = self.y_err
+        # self.y_err_sum = self.y_err_sum + self.y_err
+        # self.y_dot_err_sum = self.y_dot_err_sum + self.y_dot_err
 
-        self.phi_pos_err_sum = self.phi_pos_err_sum + self.phi_pos_err
+        # self.phi_pos_err_sum = self.phi_pos_err_sum + self.phi_pos_err
 
-        # Control x pos
-        self.x_err = positionTarget[0] - self.position[0]
-        x_des_dot = (positionTarget[0] - self.position[0])/self.dt
-        self.x_dot_err = x_des_dot - self.position_dot[0]
-        
-        self.theta_pos_err = self.KP_x*self.x_err + self.KI_x * self.x_err_sum + \
-            self.KD_x*(x_des_dot - self.position_dot[0]) - self.angles[1]
-        self.moments[1] = self.KP_theta * (self.theta_pos_err)
-        + self.KI_theta*(self.theta_pos_err_sum) + \
-            self.KD_theta * (self.KP_x*self.x_dot_err + self.KI_x*self.x_dot_err_sum+self.KD_theta * (
-                (x_des_dot-self.x_des_dot_prev)/self.dt - (self.position_dot[0] - self.x_dot_prev)/self.dt) - self.angles_dot[0])
+        # # Control x pos
+        # self.x_err = positionTarget[0] - self.position[0]
+        # x_des_dot = (positionTarget[0] - self.position[0])/self.dt
+        # self.x_dot_err = x_des_dot - self.position_dot[0]
 
-        self.x_dot_prev = self.position_dot[0]
-        self.x_des_dot_prev = x_des_dot
+        # self.theta_pos_err = self.KP_x*self.x_err + self.KI_x * self.x_err_sum + \
+        #     self.KD_x*(x_des_dot - self.position_dot[0]) - self.angles[1]
+        # self.moments[1] = self.KP_theta * (self.theta_pos_err)
+        # + self.KI_theta*(self.theta_pos_err_sum) + \
+        #     self.KD_theta * (self.KP_x*self.x_dot_err + self.KI_x*self.x_dot_err_sum+self.KD_theta * (
+        #         (x_des_dot-self.x_des_dot_prev)/self.dt - (self.position_dot[0] - self.x_dot_prev)/self.dt) - self.angles_dot[0])
 
-        self.x_err_prev = self.x_err
-        self.x_err_sum = self.x_err_sum + self.x_err
-        self.x_dot_err_sum = self.x_dot_err_sum + self.x_dot_err
+        # self.x_dot_prev = self.position_dot[0]
+        # self.x_des_dot_prev = x_des_dot
 
-        self.theta_pos_err_sum = self.theta_pos_err_sum + self.theta_pos_err
+        # self.x_err_prev = self.x_err
+        # self.x_err_sum = self.x_err_sum + self.x_err
+        # self.x_dot_err_sum = self.x_dot_err_sum + self.x_dot_err
 
-        # Control yaw
-        self.moments[2] = self.KP_psi * self.psi_err + self.KI_psi*self.psi_err_sum + \
-            self.KD_psi * (self.psi_err - self.psi_err_prev)/self.dt
+        # self.theta_pos_err_sum = self.theta_pos_err_sum + self.theta_pos_err
 
-        # Control z      
-        self.z_err = positionTarget[2] - self.position[2]
-        z_des_dot = (positionTarget[2] - self.position[2])
-        self.z_dot_err = z_des_dot - self.position_dot[2]
+        # # Control yaw
+        # self.moments[2] = self.KP_psi * self.psi_err + self.KI_psi*self.psi_err_sum + \
+        #     self.KD_psi * (self.psi_err - self.psi_err_prev)/self.dt
 
-        self.z_pos_err = self.KP_z*self.z_err + self.KI_z * self.z_err_sum + \
-            self.KD_z*(z_des_dot - self.position_dot[2]) - self.position_dot[2]
+        # # Control z
+        # self.z_err = positionTarget[2] - self.position[2]
+        # z_des_dot = (positionTarget[2] - self.position[2])
+        # self.z_dot_err = z_des_dot - self.position_dot[2]
 
-        self.thrust = self.KP_zdot * self.z_pos_err 
-        + self.KI_zdot * self.z_pos_err_sum 
-        + self.KD_zdot*(self.KP_z * self.z_dot_err + self.KI_z *self.z_dot_err_sum + self.KD_zdot *(
-            (z_des_dot - self.z_des_dot_prev)/self.dt - (self.position_dot[2] - self.z_dot_prev)/self.dt)- (self.position_dot[2] - self.z_dot_prev)/self.dt)
-       
-        print('z_des_dot', z_des_dot)
-        print('z_dot_real', self.position_dot[2])
-        print('zdot_err', self.z_dot_err)
-        print('thrust before', self.thrust)
+        # self.z_pos_err = self.KP_z*self.z_err + self.KI_z * self.z_err_sum + \
+        #     self.KD_z*(z_des_dot - self.position_dot[2]) - self.position_dot[2]
 
-        self.z_dot_prev = self.position_dot[2]
-        self.z_des_dot_prev = z_des_dot
-        self.z_err_prev = self.z_err
-        self.z_err_sum = self.z_err_sum + self.z_err
-        self.z_dot_err_sum = self.z_dot_err_sum + self.z_dot_err
+        # self.thrust = self.KP_zdot * self.z_pos_err
+        # + self.KI_zdot * self.z_pos_err_sum
+        # + self.KD_zdot*(self.KP_z * self.z_dot_err + self.KI_z *self.z_dot_err_sum + self.KD_zdot *(
+        #     (z_des_dot - self.z_des_dot_prev)/self.dt - (self.position_dot[2] - self.z_dot_prev)/self.dt)- (self.position_dot[2] - self.z_dot_prev)/self.dt)
 
-        self.z_pos_err_sum = self.z_pos_err_sum + self.z_dot_err
+        # print('z_des_dot', z_des_dot)
+        # print('z_dot_real', self.position_dot[2])
+        # print('zdot_err', self.z_dot_err)
+        # print('thrust before', self.thrust)
 
-    def controlSwarm(self):
-        # with APF
-        return 'in progress'
+        # self.z_dot_prev = self.position_dot[2]
+        # self.z_des_dot_prev = z_des_dot
+        # self.z_err_prev = self.z_err
+        # self.z_err_sum = self.z_err_sum + self.z_err
+        # self.z_dot_err_sum = self.z_dot_err_sum + self.z_dot_err
+
+        # self.z_pos_err_sum = self.z_pos_err_sum + self.z_dot_err
+
+    def connectToSwarmController(self, SwarmController):
+        self.swarmAgent = Agent(
+            self.index, (self.position[0], self.position[1], self.position[2]), self.mass)
+        SwarmController.addAgent(self.swarmAgent)
+
+
+    def controlSwarm(self, SwarmController):
+        thisAgent = SwarmController.agents[self.index]
+        thisAgent.calculateVelocity(thisAgent.calculate_total_force())
+        print('Drone index', self.index)
+        print('initial position', thisAgent.position)
+        thisAgent.move()
+        print('position Target', thisAgent.position)
+        print('')
+
+        self.targetPosition = [thisAgent.position[0], thisAgent.position[1], 5] 
+        self.controlPosition(self.targetPosition)
+        thisAgent.updatePosition((self.position[0], self.position[1], self.position[2]))
+            

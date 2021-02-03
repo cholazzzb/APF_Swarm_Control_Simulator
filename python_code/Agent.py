@@ -55,3 +55,6 @@ class Agent(object):
                 total_obstacles_potential_forces, Obstacle.ObstaclePotentialForces)
             # If there is no obstacle detected, the potential force return to 0
             self.ObstaclePotentialForce = (0, 0, 0)
+
+    def updatePosition(self, newPosition):
+        self.position = newPosition

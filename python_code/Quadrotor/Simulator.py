@@ -7,7 +7,6 @@ class Simulator(object):
     def __init__(self, agent, arena):
         self.agent = agent
         self.arena = arena
-        self.quadrotors = []
         self.objectPositions = []
         self.objectBodies = []
 

@@ -1,6 +1,5 @@
-from pylab import *
 import math
-from tupleUtil import *
+from tupleUtil import minusWithTuple, timesWithInteger
 
 # x = [0,2,-3,-1.5]
 # y = [0,3,1,-2.5]
@@ -21,7 +20,7 @@ class TargetPotentialField(object):
     def calculate_attractive_force(self, agent_index, target_index, Agents, Targets):
         distance_tuple = minusWithTuple(
             Agents[agent_index].position, Targets[target_index].position)
-        distance = sqrt(abs(sum(tuple(pow(x, 2) for x in distance_tuple))))
+        distance = math.sqrt(abs(sum(tuple(pow(x, 2) for x in distance_tuple))))
         if distance < self.target_detecting_range:
             self.attractive_force = timesWithInteger(distance_tuple, (-self.gain/self.target_detecting_range))
         else:
