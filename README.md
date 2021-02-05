@@ -8,9 +8,9 @@ This is undergoing project
 - PSO Algorithm for optimize PID Controller
 
 ## :movie_camera: Video :
-[![Swarm Control with one goal(Under development)](](https://youtu.be/Tde_2Lo7RW8)
+[![Swarm Control with one goal(Under development)](https://img.youtube.com/vi/Tde_2Lo7RW8/1.jpg)](https://youtu.be/Tde_2Lo7RW8)
 
-[![Multiple Drone]()](https://youtu.be/FwJYRlpA0gw)
+[![Multiple Drone](https://img.youtube.com/vi/Tde_2Lo7RW8/1.jpg)](https://youtu.be/FwJYRlpA0gw)
 
 ## :bread: Dependency :
 
@@ -21,4 +21,4 @@ This is undergoing project
 - Add Noise in sensor
 - Add Extended Kalman Filter
 
-Give Star if you like it =)
+Give :star: Star if you like it =)
