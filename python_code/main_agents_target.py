@@ -24,20 +24,32 @@ Ship1.setVelocity((2, 2, 0))
 Ships.append(Ship1)
 
 SPF = SwarmPotentialField(10)
-TPF = TargetPotentialField(1,1,1)
+TPF = TargetPotentialField(1,10,1)
 
-for i in range(0,50):
+for i in range(0,20):
     print('------- ITERATION ', i, '-----------')
     Drone1.SwarmPotentialForce = SPF.calculate_total_swarm_field_force(Drone1.index, Drones)
     Drone2.SwarmPotentialForce = SPF.calculate_total_swarm_field_force(Drone2.index, Drones)
     Drone1.TargetPotentialForce = TPF.calculate_target_force(Drone1.index, 0, Drones, Ships)
     Drone2.TargetPotentialForce = TPF.calculate_target_force(Drone2.index, 0, Drones, Ships)
 
+    print('Drone1 pos', Drone1.position)
+    print('FORCE')
+    print('swarm force', Drone1.SwarmPotentialForce)
+    print('target force', Drone1.TargetPotentialForce)
     Drone1.calculateVelocity(Drone1.calculate_total_force())
+    print('Drone1 vel', Drone1.velocity)
     Drone1.move()
-    Drone2.calculateVelocity(Drone1.calculate_total_force())
+    print('Drone1 new pos', Drone1.position)
+
+    print('Drone2 pos', Drone2.position)
+    print('FORCE')
+    # print('swarm force', Drone2.SwarmPotentialForce)
+    print('target force', Drone2.TargetPotentialForce)
+    Drone2.calculateVelocity(Drone2.calculate_total_force())
+    print('Drone2 vel', Drone2.velocity)
     Drone2.move()
-    
+    print('Drone2 new pos', Drone2.position)
 
 
 # Report Codes

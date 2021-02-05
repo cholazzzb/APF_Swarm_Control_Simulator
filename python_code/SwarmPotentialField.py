@@ -1,21 +1,20 @@
-from pylab import *
 import math
 from tupleUtil import *
 
 
 class SwarmPotentialField(object):
     def __init__(self, min_allowable_dist):
-        self.positiveGain1 = 1
-        self.positiveGain2 = 1
-        self.positiveGain3 = 1
+        self.positiveGain1 = 0.8
+        self.positiveGain2 = 0.8
+        self.positiveGain3 = 0.8
         self.min_allowable_dist = min_allowable_dist
-        self.damping_factor = 1
+        self.damping_factor = 5
         self.swarm_force = (0, 0, 0)
 
     def calculate_attractive_force(self, agent1_index, agent2_index, Agents):
         distance_tuple = minusWithTuple(
             Agents[agent1_index].position, Agents[agent2_index].position)
-        distance = sqrt(abs(sum(tuple(pow(x, 2) for x in distance_tuple))))
+        distance = math.sqrt(abs(sum(tuple(pow(x, 2) for x in distance_tuple))))
         
         if distance < self.min_allowable_dist:
             self.swarm_force = timesWithInteger(
@@ -35,8 +34,8 @@ class SwarmPotentialField(object):
             Agents[agent1_index].getVelocity(), Agents[agent2_index].getVelocity())
         damping_force = timesWithInteger(
             different_velocity, self.damping_factor)
-        print('self.swarm_force', self.swarm_force)
-        print('calculate_swarm_field_force', minusWithTuple(self.swarm_force, damping_force))
+        # print('self.swarm_force', self.swarm_force)
+        # print('calculate_swarm_field_force', minusWithTuple(self.swarm_force, damping_force))
         return minusWithTuple(self.swarm_force, damping_force)
 
     def calculate_total_swarm_field_force(self, agent_index, Agents):

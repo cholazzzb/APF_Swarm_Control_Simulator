@@ -28,6 +28,8 @@ for i in range(0, 20):
     plt.pause(1)
 
     Y = np.random.rand(5, 3)*0.5
+    print('Y', Y)
+    print( 'value', Y[:,1])
 
     drone1._offsets3d = (X[:,0], Y[:,1], Y[:,2])
     drone2._offsets3d = (X[:,0], Y[:,1], X[:,2])

@@ -47,7 +47,8 @@ Report3 = Report(Tello3)
 # Build Object for Swarm Controller
 TPFconfig = {"damping_factor": 1, "gain":1, "target_detecting_range":1}
 OPFconfig = {"positiveGain1": 1, "positiveGain2":1, "detecting_range": 1}
-SwarmController1 = SwarmController(TPFconfig, OPFconfig)
+SPFconfig = {"min_allowable_dist": 10}
+SwarmController1 = SwarmController(TPFconfig, OPFconfig, SPFconfig)
 Tello1.connectToSwarmController(SwarmController1)
 Tello2.connectToSwarmController(SwarmController1)
 # Tello2.connectToSwarmController(SwarmController1)

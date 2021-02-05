@@ -22,15 +22,19 @@ class Agent(object):
     def setVelocity(self, newVelocity):
         for index in range(0, len(newVelocity)):
             xVel, yVel, zVel = newVelocity
-            if abs(xVel) > self.maxVelocity:
+            if xVel > self.maxVelocity:
                 xVel = self.maxVelocity
-                newVelocity = (xVel, yVel, zVel)
-            if abs(yVel) > self.maxVelocity:
+            elif xVel < -self.maxVelocity:
+                xVel = -self.maxVelocity
+            if yVel > self.maxVelocity:
                 yVel = self.maxVelocity
-                newVelocity = (xVel, yVel, zVel)
-            if abs(zVel) > self.maxVelocity:
+            elif yVel < -self.maxVelocity:
+                yVel = -self.maxVelocity
+            if zVel > self.maxVelocity:
                 zVel = self.maxVelocity
-                newVelocity = (xVel, yVel, zVel)
+            elif zVel < -self.maxVelocity:
+                zVel = -self.maxVelocity
+            newVelocity = (xVel, yVel, zVel)
 
         self.velocity = newVelocity
 
@@ -42,7 +46,6 @@ class Agent(object):
         velocityGain = divideWithInteger(deltaForce, self.mass)
         newVelocity = plusWithTuple(self.velocity, velocityGain)
         self.setVelocity(newVelocity)
-        return '--set new velocity success--'
 
     def move(self):
         self.position = plusWithTuple(self.position, self.velocity)

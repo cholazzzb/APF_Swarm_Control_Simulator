@@ -8,15 +8,15 @@ import numpy as np
 min_allowable_dist = 10
 
 Drones = []
-position_drone1 = [(45, -89, 8)]
+position_drone1 = [(450, -89, 9)]
 Drone1 = Agent(0, position_drone1[0], 1.5)
 Drones.append(Drone1)
 
-position_drone2 = [(35, 108, 9)]
+position_drone2 = [(35, 88, 9)]
 Drone2 = Agent(1, position_drone2[0], 1)
 Drones.append(Drone2)
 
-position_drone3 = [(14, 13, 0)]
+position_drone3 = [(0, 13, 9)]
 Drone3 = Agent(2, position_drone3[0], 1)
 Drones.append(Drone3)
 
