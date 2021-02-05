@@ -7,15 +7,17 @@ This is undergoing project
 - Multiple Quadrotor Simulation
 - PSO Algorithm for optimize PID Controller
 
-## Video :
+## :movie_camera: Video :
 [![Swarm Control with one goal(Under development)](](https://youtu.be/Tde_2Lo7RW8)
+
 [![Multiple Drone]()](https://youtu.be/FwJYRlpA0gw)
-## Dependency :
+
+## :bread: Dependency :
 
 - matplotlib
 - math
 
-## Future Development :
+## :desktop_computer: Future Development :
 - Add Noise in sensor
 - Add Extended Kalman Filter
 
