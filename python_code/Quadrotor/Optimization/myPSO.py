@@ -28,46 +28,60 @@ class myPSO(object):
         initialState = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0],
                         [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
         initialInput = [0.0, 0.0, 0.0, 0.0]
-        attitudeControllerPID = [[ 1.35272881e+0, 1 0,  1.10478473e+00],  # PID phi
+        attitudeControllerPID = [[1.35272881e+0, 0,  1.10478473e+00],  # PID phi
                                  [10.05914941, 0.0, 1.13055156],  # PID theta
-                                 [0, 0, 0],  # PID psi
-                                 [0, 0, 0]]  # PID z dot
+                                 [1.29305141e+01, 0, 1.11103378e+00],  # PID psi
+                                 [93.8483854, 70.64057641, 23.2112922 ]]  # PID z dot
 
-        positionControllerPID = [[0, 0, 0],  # PID x
-                                 [37.79524657, 29.59992759, -0.10065972],  # PID y
-                                 [0, 0, 0]]  # PID z
-
-        targetAttitude = [0, 0, 0, 0]
+        positionControllerPID = [[41.985843, 26.46155262, 67.1814884 ],  # PID x
+                                [43.0871872, 51.88184991, 42.54130183],  # PID y
+                                [ 0.81952637, 30.86727309, 16.03563472]
+]  # PID z
 
         parameterTest = {
-            "phi": 0,
-            "theta": 1,
-            "psi": 2,
-            "zdot": 3
+            "phi": [0, 0],
+            "theta": [0, 1],
+            "psi": [0, 2],
+            "zdot": [0, 3],
+
+            "x": [1, 0],
+            "y": [1, 1],
+            "z": [1, 2]
         }
 
-        attitudeControllerPID[parameterTest.get(self.responseType)] = [
-            k[0], k[1], k[2]]
-        targetAttitude[parameterTest.get(
-            self.responseType)] = self.targetOutput
+        index = parameterTest.get(self.responseType)
+        
+        controller = [attitudeControllerPID, positionControllerPID]
+        controller[index[0]][index[1]] = [k[0], k[1], k[2]]
+
         model = Quadrotor(0, "model", specs, initialState,
                           initialInput, attitudeControllerPID, positionControllerPID)
+        
+        targetAttitude = [0, 0, 0, 0]
+        targetPosition = [0, 0, 0]
+        target = [targetAttitude, targetPosition]
+        target[index[0]][index[1]] = self.targetOutput
 
         inputPID = []
         responseValue = []
 
         for iteration in self.simulationTime:
-            model.controlAttitude(targetAttitude)
+            if(index[0] == 0):
+                model.controlAttitude(targetAttitude)
+            else:
+                model.controlPosition(targetPosition)
+
             model.updateState()
             response = {
                 "phi": model.angles[0]*radianToDegree,
                 "theta": model.angles[1]*radianToDegree,
                 "psi": model.angles[2]*radianToDegree,
+                "zdot": model.position_dot[2],
                 "x": model.position[0],
                 "y": model.position[1],
                 "z": model.position[2],
-                "zdot": model.position_dot[2],
             }
+
             if response.get(self.responseType) > 100 or response.get(self.responseType) < -100:
                 return responseValue, False
 
