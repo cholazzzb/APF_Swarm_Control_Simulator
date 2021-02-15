@@ -1,4 +1,4 @@
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import math
 import sys
 sys.path.append('../')
@@ -90,7 +90,7 @@ for i in range(200):
     # # Tello2.controlAttitude([10, 0, 0, 5])
     # # Tello3.controlAttitude([0, 0, 30, 3])
 
-    Tello1.controlPosition([0, 3, 5])
+    Tello1.controlPosition([3, 3, 5])
     # Tello2.controlPosition([6,6,0])
     # Tello3.controlPosition([0,0,0])
 
