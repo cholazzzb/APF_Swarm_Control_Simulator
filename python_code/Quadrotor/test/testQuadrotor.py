@@ -22,14 +22,14 @@ initialState3 = [[7.0, -5.0, 0.0], [0.0, 0.0, 0.0],
                  [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
 
 initialInput = [0.0, 0.0, 0.0, 0.0]
-attitudeControllerPID = [[1.35272881e+0, 0,  1.10478473e+00],  # PID phi
-                                 [10.05914941, 0.0, 1.13055156],  # PID theta
-                                 [1.29305141e+01, 0, 1.11103378e+00],  # PID psi
-                                 [93.8483854, 70.64057641, 23.2112922 ]]  # PID z dot
+attitudeControllerPID = [[0, 0, 0.88616771],  # PID phi
+                                 [0, 0, 0.88616339],  # PID theta
+                                 [0, 0, 0.88616098],  # PID psi
+                                 [96.17007323, 7.35729734, 0]]  # PID z dot
 
-positionControllerPID = [[41.985843, 26.46155262, 67.1814884 ],  # PID x
-                        [43.0871872, 51.88184991, 42.54130183],  # PID y
-                        [0, 0, 0]]  # PID z
+positionControllerPID = [[27.83997997, 70.32934802, 4.70222228],  # PID x
+                        [27.83997036, 68.08563516, 47.6545511],  # PID y
+                        [0.84007563, 88.32316777, 68.43428605]]  # PID z
 
 Tello1 = Quadrotor(0, "Tello1", specs, initialState,
                    initialInput, attitudeControllerPID, positionControllerPID)
@@ -81,16 +81,16 @@ drone1Simulator.initialDrawing("red", "blue")
 
 quadrotorView.show()
 
-for i in range(200):
+for i in range(350):
     print('-------Time:', Tello1.t, '-------')
     print('---------------------------------')
 
     # [phi, theta, psi, zdot] (degree)
-    # Tello1.controlAttitude([-20, 0, 0, 0])
-    # # Tello2.controlAttitude([10, 0, 0, 5])
-    # # Tello3.controlAttitude([0, 0, 30, 3])
+    # Tello1.controlAttitude([30, 0, 30, 0])
+    # Tello2.controlAttitude([10, 0, 0, 5])
+    # Tello3.controlAttitude([0, 0, 30, 3])
 
-    Tello1.controlPosition([3, 3, 5])
+    Tello1.controlPosition([0.7, 1, 5])
     # Tello2.controlPosition([6,6,0])
     # Tello3.controlPosition([0,0,0])
 

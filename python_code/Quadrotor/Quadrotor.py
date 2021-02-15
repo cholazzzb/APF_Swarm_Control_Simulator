@@ -265,8 +265,28 @@ class Quadrotor(object):
         self.x_err = positionTarget[0] - self.position[0]
         self.y_err = positionTarget[1] - self.position[1]
         self.z_err = positionTarget[2] - self.position[2]
-
+        
         attitudeTarget = [0, 0, 0, 0]  # psi theta phi zdot
+        print('error before', self.x_err, self.y_err, self.z_err)
+
+        if self.x_err > self.y_err:
+            if self.y_err != 0 :
+                attitudeTarget[2] = -math.atan2(self.y_err, self.x_err)*radianToDegree
+            else:
+                attitudeTarget[2] = 0 # arc tan(10) = +- 84 degree
+            self.x_err = math.sqrt(self.x_err**2 + self.y_err**2)
+            self.y_err = 0
+            
+        else:
+            if self.x_err != 0 :
+                attitudeTarget[2] = math.atan2(self.x_err, self.y_err)*radianToDegree
+            else:
+                attitudeTarget[2] = 0 # arc tan(10) = +- 84 degree
+            self.y_err = math.sqrt(self.x_err**2 + self.y_err**2)
+            self.x_err = 0
+
+        print('error after', self.x_err, self.y_err, self.z_err)
+
         attitudeTarget[0] = self.KP_y * self.y_err
         + self.KI_y * self.y_err_sum
         + self.KD_y * (self.y_err - self.y_err_prev) / self.dt
@@ -288,9 +308,8 @@ class Quadrotor(object):
         self.z_err_prev = self.z_err
         self.z_err_sum = self.z_err_sum + self.z_err
 
-        # print('Degree : ', self.getState()[2])
-        # print('Attitude Target', attitudeTarget)
-
+        print('Current Angles', self.angles)
+        print('Attitude Target', attitudeTarget)
         self.controlAttitude(attitudeTarget)
 
         # # Control y pos
