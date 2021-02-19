@@ -4,15 +4,22 @@ import random
 
 import sys
 sys.path.append('../../')
-from TargetPotentialField import TargetPotentialField
-from Target import Target
-from ObstaclePotentialField import ObstaclePotentialField
-from Obstacle import Obstacle
 from Agent import Agent
 
 radianToDegree = 180/math.pi
 degreeToRadian = math.pi/180
 
+# Rotation Matrix -> ETBM (Earth To Body Matrix)
+def ETBM(angles, vector):
+    phi = angles[0]
+    theta = angles[1]
+    psi = angles[2]
+    rotationMatrix = np.array([
+            [math.cos(psi)*math.cos(theta), math.sin(psi)*math.cos(theta), -math.sin(theta)],
+            [-math.sin(psi)*math.cos(phi)+math.cos(psi)*math.sin(theta)*math.sin(phi), math.cos(psi)*math.cos(phi)+math.sin(psi)*math.sin(theta)*math.sin(phi), math.cos(theta)*math.sin(phi)],
+            [math.sin(psi)*math.sin(phi)+math.cos(phi)*math.sin(theta)*math.cos(phi), -math.cos(psi)*math.sin(phi)+math.sin(psi)*math.sin(theta)*math.cos(phi), math.cos(theta)*math.cos(phi)]])
+
+    return rotationMatrix.dot(vector)
 
 class Quadrotor(object):
     def __init__(self, index, name, specs, initialState, initialInput, attitudeControllerPID, positionControllerPID):
@@ -147,23 +154,18 @@ class Quadrotor(object):
     def getBodyPosition(self):
 
         # Quadrotor Body (Rotor), format: ([x,y,z])
+        # Using Rotation Matrix
         # direction : +x
-        rotor1 = [self.position[0] + math.cos(self.angles[1])*self.armLength + math.cos(self.angles[2])*self.armLength, self.position[1] - math.sin(self.angles[2])*self.armLength,
-                  self.position[2] + math.sin(self.angles[1])*self.armLength]
-
+        rotor1 = self.position + ETBM(self.angles, np.array([self.armLength, 0, 0]))
         # direction : -x
-        rotor2 = [self.position[0] - math.cos(self.angles[1])*self.armLength - math.cos(self.angles[2])*self.armLength, self.position[1] + math.sin(self.angles[2])*self.armLength,
-                  self.position[2] - math.sin(self.angles[1])*self.armLength]
-
-        # direction : +y
-        rotor3 = [self.position[0] + math.sin(self.angles[2])*self.armLength, self.position[1] + math.cos(
-            self.angles[0]) * self.armLength + math.cos(self.angles[2])*self.armLength, self.position[2] - math.sin(self.angles[0])*self.armLength]
-
+        rotor2 = self.position + ETBM(self.angles, np.array([-self.armLength, 0, 0]))
+        # direction : +y (Front)
+        rotor3 = self.position + ETBM(self.angles, np.array([0, self.armLength, 0]))
         # direction : -y
-        rotor4 = [self.position[0] - math.sin(self.angles[2])*self.armLength, self.position[1] - math.cos(
-            self.angles[0]) * self.armLength - math.cos(self.angles[2])*self.armLength, self.position[2] + math.sin(self.angles[0])*self.armLength]
+        rotor4 = self.position + ETBM(self.angles, np.array([0, -self.armLength, 0]))
 
-        return np.array([[rotor1[0], rotor2[0], rotor3[0], rotor4[0]], [rotor1[1], rotor2[1], rotor3[1], rotor4[1]], [rotor1[2], rotor2[2], rotor3[2], rotor4[2]]])
+        # Format : [front rotor, otherRotors]
+        return np.array([[rotor3[0], rotor3[1], rotor3[2]], [[rotor1[0], rotor2[0], rotor4[0]], [rotor1[1], rotor2[1], rotor4[1]], [rotor1[2], rotor2[2], rotor4[2]]]], dtype='object')
 
     def updateState(self):
         self.t = round(self.t + self.dt, 3)
@@ -261,54 +263,51 @@ class Quadrotor(object):
         self.z_dot_err_sum = self.z_dot_err_sum + self.z_dot_err
 
     def controlPosition(self, positionTarget):
-        # Keknya bener
-        self.x_err = positionTarget[0] - self.position[0]
-        self.y_err = positionTarget[1] - self.position[1]
-        self.z_err = positionTarget[2] - self.position[2]
-        
-        attitudeTarget = [0, 0, 0, 0]  # psi theta phi zdot
-        print('error before', self.x_err, self.y_err, self.z_err)
-
-        if self.x_err > self.y_err:
-            if self.y_err != 0 :
-                attitudeTarget[2] = -math.atan2(self.y_err, self.x_err)*radianToDegree
-            else:
-                attitudeTarget[2] = 0 # arc tan(10) = +- 84 degree
-            self.x_err = math.sqrt(self.x_err**2 + self.y_err**2)
-            self.y_err = 0
-            
-        else:
-            if self.x_err != 0 :
-                attitudeTarget[2] = math.atan2(self.x_err, self.y_err)*radianToDegree
-            else:
-                attitudeTarget[2] = 0 # arc tan(10) = +- 84 degree
-            self.y_err = math.sqrt(self.x_err**2 + self.y_err**2)
-            self.x_err = 0
-
+        yaw_angle_rad = self.angles[2]
+        # Kompensasi karena sumbu z dibalik
+        error = [positionTarget[1] - self.position[1], positionTarget[0] - self.position[0], -positionTarget[2] + self.position[2]]
+        # Convert to quadrotor coordinate frame
+        [self.y_err, self.x_err, self.z_err] = ETBM(self.angles, error) # Because the z is reversed from bottom to top
+        self.x_err = round(self.x_err)
+        self.y_err = round(self.y_err, 1)
+        self.z_err = self.z_err*-1
         print('error after', self.x_err, self.y_err, self.z_err)
 
-        attitudeTarget[0] = self.KP_y * self.y_err
-        + self.KI_y * self.y_err_sum
-        + self.KD_y * (self.y_err - self.y_err_prev) / self.dt
+        attitudeTarget = [0, 0, 0, 0]  # psi theta phi zdot (degree and m/s)
 
-        self.y_err_prev = self.y_err
-        self.y_err_sum = self.y_err_sum + self.y_err
+        # Yaw Control
+        yaw_error = 0
+        distance_err = (math.sqrt(self.x_err**2 + self.y_err**2))
+        if distance_err > 0.3:
+            yaw_error = math.acos((self.y_err/distance_err))
+        print('error yaw', yaw_error*radianToDegree)
+        if self.x_err < 0 :
+            yaw_error = yaw_error*-1
+        attitudeTarget[2] = (yaw_angle_rad + yaw_error)*radianToDegree
 
-        attitudeTarget[1] = self.KP_x * self.x_err
-        + self.KI_x * self.x_err_sum
-        + self.KD_x * (self.x_err - self.x_err_prev) / self.dt
+        if abs(math.atan2(self.x_err, self.y_err)*radianToDegree) < 5:
+            attitudeTarget[0] = self.KP_y * self.y_err
+            + self.KI_y * self.y_err_sum
+            + self.KD_y * (self.y_err - self.y_err_prev) / self.dt
 
-        self.x_err_prev = self.x_err
-        self.x_err_sum = self.x_err_sum + self.x_err
+            self.y_err_prev = self.y_err
+            self.y_err_sum = self.y_err_sum + self.y_err
 
-        attitudeTarget[3] = self.KP_z * self.z_err
-        + self.KI_z * self.z_err_sum
-        + self.KD_z * (self.z_err - self.z_err_prev) / self.dt
+            attitudeTarget[1] = self.KP_x * self.x_err
+            + self.KI_x * self.x_err_sum
+            + self.KD_x * (self.x_err - self.x_err_prev) / self.dt
 
-        self.z_err_prev = self.z_err
-        self.z_err_sum = self.z_err_sum + self.z_err
+            self.x_err_prev = self.x_err
+            self.x_err_sum = self.x_err_sum + self.x_err
 
-        print('Current Angles', self.angles)
+            attitudeTarget[3] = self.KP_z * self.z_err
+            + self.KI_z * self.z_err_sum
+            + self.KD_z * (self.z_err - self.z_err_prev) / self.dt
+
+            self.z_err_prev = self.z_err
+            self.z_err_sum = self.z_err_sum + self.z_err
+
+        print('Current Angles', np.array(self.angles)*radianToDegree)
         print('Attitude Target', attitudeTarget)
         self.controlAttitude(attitudeTarget)
 
@@ -389,17 +388,17 @@ class Quadrotor(object):
             self.index, (self.position[0], self.position[1], self.position[2]), self.mass)
         SwarmController.addAgent(self.swarmAgent)
 
-
     def controlSwarm(self, SwarmController):
         thisAgent = SwarmController.agents[self.index]
         thisAgent.calculateVelocity(thisAgent.calculate_total_force())
+        print('this Agent velocity in APF ->', thisAgent.getVelocity())
         print('Drone index', self.index)
         print('initial position', thisAgent.position)
         thisAgent.move()
         print('position Target', thisAgent.position)
         print('')
 
-        self.targetPosition = [thisAgent.position[0], thisAgent.position[1], 5] 
+        self.targetPosition = [thisAgent.position[0], thisAgent.position[1], 5]
         self.controlPosition(self.targetPosition)
-        thisAgent.updatePosition((self.position[0], self.position[1], self.position[2]))
-            
+        thisAgent.updatePosition(
+            (self.position[0], self.position[1], self.position[2]))

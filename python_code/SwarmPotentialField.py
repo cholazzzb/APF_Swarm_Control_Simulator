@@ -14,15 +14,17 @@ class SwarmPotentialField(object):
     def calculate_attractive_force(self, agent1_index, agent2_index, Agents):
         distance_tuple = minusWithTuple(
             Agents[agent1_index].position, Agents[agent2_index].position)
-        distance = math.sqrt(abs(sum(tuple(pow(x, 2) for x in distance_tuple))))
-        
+        distance = math.sqrt(
+            abs(sum(tuple(pow(x, 2) for x in distance_tuple))))
+        print('distance between(', agent1_index, ',' , agent2_index, '): ', distance)
+
         if distance < self.min_allowable_dist:
             self.swarm_force = timesWithInteger(
                 distance_tuple,
                 ((1/distance - 1/self.min_allowable_dist)*self.positiveGain1/distance/distance
                     -
                  self.positiveGain2*(distance-self.min_allowable_dist))
-                 /distance
+                / distance
             )
         else:
             self.swarm_force = timesWithInteger(
@@ -39,10 +41,11 @@ class SwarmPotentialField(object):
         return minusWithTuple(self.swarm_force, damping_force)
 
     def calculate_total_swarm_field_force(self, agent_index, Agents):
-        total_swarm_field_force = (0,0,0)
+        total_swarm_field_force = (0, 0, 0)
         for Agent in Agents:
             if Agent.index == agent_index:
                 pass
             else:
-                total_swarm_field_force = plusWithTuple(total_swarm_field_force, self.calculate_swarm_field_force(agent_index, Agent.index, Agents))
+                total_swarm_field_force = plusWithTuple(
+                    total_swarm_field_force, self.calculate_swarm_field_force(agent_index, Agent.index, Agents))
         return total_swarm_field_force

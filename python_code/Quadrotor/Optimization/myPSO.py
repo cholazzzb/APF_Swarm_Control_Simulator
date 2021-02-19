@@ -10,7 +10,6 @@ from Quadrotor import Quadrotor
 radianToDegree = 180/math.pi
 degreeToRadian = math.pi/180
 
-
 class myPSO(object):
     def __init__(self, simulationTime, targetOutput, min, max, responseType):
         self.simulationTime = simulationTime

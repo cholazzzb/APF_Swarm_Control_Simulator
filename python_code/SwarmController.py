@@ -25,3 +25,4 @@ class SwarmController(object):
         for drone in self.agents:
             drone.TargetPotentialForce = self.TPF.calculate_target_force(drone.index, 0, self.agents, self.targets)
             drone.SwarmPotentialForce = self.SPF.calculate_total_swarm_field_force(drone.index, self.agents)
+            drone.ObstaclePotentialForce = self.OPF.calculate_agent_obstacles_force(self.agents[drone.index], self.obstacles)
