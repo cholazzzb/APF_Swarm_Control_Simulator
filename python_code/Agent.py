@@ -9,7 +9,7 @@ class Agent(object):
         self.positionHistory = [position]
         self.mass = mass
         self.velocity = (0, 0, 0)
-        self.maxVelocity = 5 # absolute value
+        self.maxVelocity = 0.6 # absolute value, need to check tello spec
         self.ObstaclePotentialForce = (0, 0, 0)
         self.SwarmPotentialForce = []
         self.TargetPotentialForce = (0, 0, 0)
