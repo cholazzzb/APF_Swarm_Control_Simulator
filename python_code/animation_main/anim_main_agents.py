@@ -27,6 +27,7 @@ DroneAnim2 = DotAgent(position_drone2)
 # DroneAnim3 = DotAgent(position_drone3)
 
 SPF = SwarmPotentialField(min_allowable_dist)
+SPF.setup([0.37047398, 0.45561605, 0.49988309, 0.49975151])
 # SPF.setPositiveGain1(1)
 # SPF.setDampingFactor(0.5)
 # SPF.setPositiveGain3(0.3)

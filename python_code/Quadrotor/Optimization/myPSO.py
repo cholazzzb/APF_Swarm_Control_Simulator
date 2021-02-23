@@ -7,6 +7,10 @@ import sys
 sys.path.append('../')
 from Quadrotor import Quadrotor
 
+sys.path.append('../')
+from Agent import Agent
+from SwarmPotentialField import SwarmPotentialField
+
 radianToDegree = 180/math.pi
 degreeToRadian = math.pi/180
 
@@ -34,8 +38,7 @@ class myPSO(object):
 
         positionControllerPID = [[41.985843, 26.46155262, 67.1814884 ],  # PID x
                                 [43.0871872, 51.88184991, 42.54130183],  # PID y
-                                [ 0.81952637, 30.86727309, 16.03563472]
-]  # PID z
+                                [ 0.81952637, 30.86727309, 16.03563472]]  # PID z
 
         parameterTest = {
             "phi": [0, 0],
@@ -85,6 +88,36 @@ class myPSO(object):
                 return responseValue, False
 
             responseValue.append(response.get(self.responseType, "nothing"))
+        return responseValue, True
+    
+    def calculateSwarmDrones(self, newParameters):        
+        # Setup
+        min_allowable_dist = self.targetOutput
+        Drones = []
+        position_drone1 = [(0, 0, 5)]
+        Drone1 = Agent(0, position_drone1[0], 1)
+        Drones.append(Drone1)
+
+        position_drone2 = [(10, 0, 5)]
+        Drone2 = Agent(1, position_drone2[0], 1)
+        Drones.append(Drone2) 
+
+        SPF = SwarmPotentialField(min_allowable_dist)
+        SPF.setup(newParameters)
+
+        responseValue = []
+
+        for iteration in self.simulationTime:
+            Drone1.SwarmPotentialForce = SPF.calculate_total_swarm_field_force(Drone1.index, Drones)
+            Drone2.SwarmPotentialForce = SPF.calculate_total_swarm_field_force(Drone2.index, Drones)
+            Drone1.calculateVelocity(Drone1.SwarmPotentialForce)
+            Drone1.move()
+            Drone2.calculateVelocity(Drone2.SwarmPotentialForce)
+            Drone2.move()
+
+            [distance_tuple, distance] = SPF.getDistance(0, 1, Drones) 
+            responseValue.append(distance) 
+            
         return responseValue, True
 
     def calculateMeanAbsoluteError(self, outputValues):
@@ -140,8 +173,13 @@ class myPSO(object):
         # First loop
         for particle_index in range(particles):
             # Count
-            [systemResponse, isStable] = self.calculateQuadrotorResponse(
-                particle_position[particle_index])
+
+            # For APF Swarm
+            [systemResponse, isStable] = self.calculateSwarmDrones(particle_position[particle_index])
+
+            # For Attitude and Position Controller
+            # [systemResponse, isStable] = self.calculateQuadrotorResponse(
+            #     particle_position[particle_index])
             if isStable:
                 cost_value = cost_function(systemResponse)
             else:
@@ -169,8 +207,11 @@ class myPSO(object):
                 particle_position[particle_index] = particle_velocity[particle_index] + \
                     particle_position[particle_index]
 
-                [systemResponse, isStable] = self.calculateQuadrotorResponse(
-                    particle_position[particle_index])
+                # For Swarm
+                [systemResponse, isStable] = self.calculateSwarmDrones(particle_position[particle_index])
+                # For Attitude and Position Controller
+                # [systemResponse, isStable] = self.calculateQuadrotorResponse(
+                #     particle_position[particle_index])
                 if isStable:
                     cost_value = cost_function(systemResponse)
                 else:
@@ -194,7 +235,7 @@ class myPSO(object):
 
             iterate = iterate+1
             print("Iteration: ", iterate, " -> Global best fitness: ",
-                  global_fit_value, ", PID :",  global_best_position)
+                  global_fit_value, ", Parameters :",  global_best_position)
 
         print("Total iteration -> ", iterate)
         print("Best fitness -> ", global_fit_value)
@@ -203,11 +244,17 @@ class myPSO(object):
 
     def plotBestResponse(self):
         plt.close()
-        plt.title("Response and PID (from PSO parameter)")
+    
+        # plt.title("Distance between Drones")
+        # plt.title("Response and PID (from PSO parameter)")
         plt.xlabel("Time (s)")
         plt.ylabel("Output")
-        [bestResponse, isStable] = self.calculateQuadrotorResponse(
-            self.bestParameter)
+        # For APF Swarm 
+        [bestResponse, isStable] = self.calculateSwarmDrones(self.bestParameter)
+
+        # For Attitude and Position Controller
+        # [bestResponse, isStable] = self.calculateQuadrotorResponse(
+        #     self.bestParameter)
         plt.plot(self.simulationTime, bestResponse, label="Best Response")
         plt.plot(self.simulationTime, self.targetOutput *
                  np.ones(self.simulationTime.shape), label="Set Point", color="red")
