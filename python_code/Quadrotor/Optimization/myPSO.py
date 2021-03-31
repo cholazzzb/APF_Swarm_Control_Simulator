@@ -10,6 +10,8 @@ from Quadrotor import Quadrotor
 sys.path.append('../')
 from Agent import Agent
 from SwarmPotentialField import SwarmPotentialField
+from Target import Target
+from TargetPotentialField import TargetPotentialField
 
 radianToDegree = 180/math.pi
 degreeToRadian = math.pi/180
@@ -90,7 +92,10 @@ class myPSO(object):
             responseValue.append(response.get(self.responseType, "nothing"))
         return responseValue, True
     
-    def calculateSwarmDrones(self, newParameters):        
+    def calculateSwarmDrones(self, newParameters):    
+        SPFParameter = newParameters[0:4]
+        TPFParameter = newParameters[4:6]
+
         # Setup
         min_allowable_dist = self.targetOutput
         Drones = []
@@ -103,16 +108,25 @@ class myPSO(object):
         Drones.append(Drone2) 
 
         SPF = SwarmPotentialField(min_allowable_dist)
-        SPF.setup(newParameters)
+        SPF.setup(SPFParameter)
+
+        Ship = Target([5,10,5])
+        TPF = TargetPotentialField(TPFParameter[0], TPFParameter[1], 1)
+        Ships = [Ship]
 
         responseValue = []
 
         for iteration in self.simulationTime:
             Drone1.SwarmPotentialForce = SPF.calculate_total_swarm_field_force(Drone1.index, Drones)
             Drone2.SwarmPotentialForce = SPF.calculate_total_swarm_field_force(Drone2.index, Drones)
-            Drone1.calculateVelocity(Drone1.SwarmPotentialForce)
+
+            Drone1.TargetPotentialForce = TPF.calculate_target_force(Drone1.index, 0, Drones, Ships)
+            Drone2.TargetPotentialForce = TPF.calculate_target_force(Drone2.index, 0, Drones, Ships)
+
+
+            Drone1.calculateVelocity(Drone1.calculate_total_force())
             Drone1.move()
-            Drone2.calculateVelocity(Drone2.SwarmPotentialForce)
+            Drone2.calculateVelocity(Drone2.calculate_total_force())
             Drone2.move()
 
             [distance_tuple, distance] = SPF.getDistance(0, 1, Drones) 

@@ -39,13 +39,17 @@ class SwarmPotentialField(object):
         # print('distance between(', agent1_index, ',' , agent2_index, '): ', distance)
 
         if distance < self.min_allowable_dist:
-            self.swarm_force = timesWithInteger(
-                distance_tuple,
-                ((1/distance - 1/self.min_allowable_dist)*self.positiveGain1/distance/distance
-                    -
-                 self.positiveGain2*(distance-self.min_allowable_dist))
-                / distance
-            )
+            try:
+                self.swarm_force = timesWithInteger(
+                    distance_tuple,
+                    ((1/distance - 1/self.min_allowable_dist)*self.positiveGain1/distance/distance
+                        -
+                    self.positiveGain2*(distance-self.min_allowable_dist))
+                    / distance
+                )
+            except:
+                # print('the Quadrotors Crash!')
+                self.swarm_force = (0,0,0)
         # Tambahan sendiri
         elif distance < self.min_allowable_dist + self.allowable_dist_range: 
             self.swarm_force = (0,0,0)
