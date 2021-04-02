@@ -17,7 +17,7 @@ from tupleUtil import calculateLength
 radianToDegree = 180/math.pi
 degreeToRadian = math.pi/180
 
-class myPSO(object):
+class myPSOAPF(object):
     def __init__(self, simulationTime, targetOutput, min, max, responseType):
         self.simulationTime = simulationTime
         if(responseType == "theta" or responseType == "phi" or responseType == "psi"):
@@ -104,7 +104,7 @@ class myPSO(object):
     
     def calculateSwarmDrones(self, newParameters):    
         SPFParameter = newParameters[0:4]
-        TPFParameter = newParameters[4:6]
+        # TPFParameter = newParameters[4:6]
 
         # Setup
         min_allowable_dist = self.targetOutput
@@ -120,9 +120,9 @@ class myPSO(object):
         SPF = SwarmPotentialField(min_allowable_dist)
         SPF.setup(SPFParameter)
 
-        Ship = Target([5,10,5])
-        TPF = TargetPotentialField(TPFParameter[0], TPFParameter[1], 1)
-        Ships = [Ship]
+        # Ship = Target([5,10,5])
+        # TPF = TargetPotentialField(TPFParameter[0], TPFParameter[1], 1)
+        # Ships = [Ship]
 
         responseValue = []
 
@@ -130,11 +130,11 @@ class myPSO(object):
             Drone1.SwarmPotentialForce = SPF.calculate_total_swarm_field_force(Drone1.index, Drones)
             Drone2.SwarmPotentialForce = SPF.calculate_total_swarm_field_force(Drone2.index, Drones)
 
-            Drone1.TargetPotentialForce = TPF.calculate_target_force(Drone1.index, 0, Drones, Ships)
-            Drone2.TargetPotentialForce = TPF.calculate_target_force(Drone2.index, 0, Drones, Ships)
+            # Drone1.TargetPotentialForce = TPF.calculate_target_force(Drone1.index, 0, Drones, Ships)
+            # Drone2.TargetPotentialForce = TPF.calculate_target_force(Drone2.index, 0, Drones, Ships)
 
             self.swarmForces.append(calculateLength(Drone1.calculate_total_force()))
-            
+            # print('swarmForces', calculateLength(Drone1.calculate_total_force()))
             Drone1.calculateVelocity(Drone1.calculate_total_force())
             Drone1.move()
             Drone2.calculateVelocity(Drone2.calculate_total_force())
@@ -162,8 +162,7 @@ class myPSO(object):
         error = []
         for outputValue in outputValues:
             error = np.append(error, [self.targetOutput-outputValue])
-        totalCostFunction = self.alpha * np.sum(abs(error)) + self.beta * np.sum(self.swarmForces)
-        return totalCostFunction
+        return self.alpha * np.sum(abs(error)) + self.beta * np.sum(self.swarmForces)
 
     def particleSwarmOptimization(self, w, c1, c2, particles,  totalParameters, min_param_value, max_param_value, total_iteration, isMinimize, costFunctionType):
         costFunctionList = {
@@ -182,8 +181,8 @@ class myPSO(object):
             particle_fit_value = np.ones(particles) * 0
             global_fit_value = 0
 
-        particle_position = np.random.uniform(
-            min_param_value, max_param_value, (particles, totalParameters))
+        particle_position = np.round(np.random.uniform(
+            min_param_value, max_param_value, (particles, totalParameters)),2)
         particle_position_best = particle_position
         particle_velocity = np.zeros((particles, totalParameters))
         global_best_position = np.zeros(totalParameters)
@@ -209,11 +208,11 @@ class myPSO(object):
         # First loop
         for particle_index in range(particles):
             # For APF Swarm
-            # [systemResponse, isStable] = self.calculateSwarmDrones(particle_position[particle_index])
+            [systemResponse, isStable] = self.calculateSwarmDrones(particle_position[particle_index])
 
             # For Attitude and Position Controller
-            [systemResponse, isStable] = self.calculateQuadrotorResponse(
-                particle_position[particle_index])
+            # [systemResponse, isStable] = self.calculateQuadrotorResponse(
+            #     particle_position[particle_index])
             if isStable:
                 cost_value = cost_function(systemResponse)
             else:
@@ -242,10 +241,10 @@ class myPSO(object):
                     particle_position[particle_index], 2)
 
                 # For Swarm
-                # [systemResponse, isStable] = self.calculateSwarmDrones(particle_position[particle_index])
+                [systemResponse, isStable] = self.calculateSwarmDrones(particle_position[particle_index])
                 # For Attitude and Position Controller
-                [systemResponse, isStable] = self.calculateQuadrotorResponse(
-                    particle_position[particle_index])
+                # [systemResponse, isStable] = self.calculateQuadrotorResponse(
+                #     particle_position[particle_index])
                 if isStable:
                     cost_value = cost_function(systemResponse)
                 else:
@@ -284,13 +283,13 @@ class myPSO(object):
         plt.ylabel("Output")
 
         # For APF Swarm 
-        # plt.title("Distance between Drones")
-        # [bestResponse, isStable] = self.calculateSwarmDrones(self.bestParameter)
+        plt.title("Distance between Drones")
+        [bestResponse, isStable] = self.calculateSwarmDrones(self.bestParameter)
 
         # For Attitude and Position Controller
-        plt.title("Response and PID (from PSO parameter)")
-        [bestResponse, isStable] = self.calculateQuadrotorResponse(
-            self.bestParameter)
+        # plt.title("Response and PID (from PSO parameter)")
+        # [bestResponse, isStable] = self.calculateQuadrotorResponse(
+            # self.bestParameter)
         plt.plot(self.simulationTime, bestResponse, label="Best Response")
         plt.plot(self.simulationTime, self.targetOutput *
                  np.ones(self.simulationTime.shape), label="Set Point", color="red")

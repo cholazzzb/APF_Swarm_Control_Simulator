@@ -72,6 +72,7 @@ plt.ylabel("Y (m)")
 
 # plt.plot(timeNumpy, Y, label="Estimated Trajectory", color="green")
 plt.plot(xPos_history, yPos_history, label="Measured Trajectory", color="red")
+plt.arrow(1, 1, 1, 1, shape='full', lw=0, length_includes_head=True, head_width=0.05)
 # plt.plot(timeNumpy, Y, label="Real Trajectory", color="blue")
 plt.legend(loc='upper left')
 plt.show()

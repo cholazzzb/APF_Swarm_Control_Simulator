@@ -11,12 +11,12 @@ from SwarmPotentialField import SwarmPotentialField
 min_allowable_dist = 1
 
 Drones = []
-position_drone1 = (10, -9, 9)
-Drone1 = Agent(0, position_drone1, 1.5)
+position_drone1 = (0, 0, 5)
+Drone1 = Agent(0, position_drone1, 1)
 Drones.append(Drone1)
 DroneAnim1 = DotAgent(position_drone1)
 
-position_drone2 = (8, 8, 9)
+position_drone2 = (10, 0, 5)
 Drone2 = Agent(1, position_drone2, 1)
 Drones.append(Drone2)
 DroneAnim2 = DotAgent(position_drone2)
@@ -27,7 +27,7 @@ DroneAnim2 = DotAgent(position_drone2)
 # DroneAnim3 = DotAgent(position_drone3)
 
 SPF = SwarmPotentialField(min_allowable_dist)
-SPF.setup([0.37047398, 0.45561605, 0.49988309, 0.49975151])
+SPF.setup([0.3, 0.21, 0.56, 0.03])
 # SPF.setPositiveGain1(1)
 # SPF.setDampingFactor(0.5)
 # SPF.setPositiveGain3(0.3)
@@ -38,22 +38,27 @@ report = plt.figure()
 ax1 = report.add_subplot(511)
 ax1.set_title("Distance between quadrotor 1 and 2")
 ax2 = report.add_subplot(513)
-ax2.set_title("Distance between quadrotor 2 and 3")
+ax2.set_title("X Pos Drone 1")
 ax3 = report.add_subplot(515)
-ax3.set_title("Distance between quadrotor 3 and 1")
+ax3.set_title("X Pos Drone 2")
 
 x_time = []
 y_distance1 = []
 max_distance1 = 0
+
 y_distance2 = []
 max_distance2 = 0
 y_distance3 = []
 max_distance3 = 0
 
+x_pos1 = []
+x_pos1_max = 0
+x_pos2 = []
+x_pos2_max = 0
 
 dis1, = ax1.plot(x_time, y_distance1, 'r-')
 dis2, = ax2.plot(x_time, y_distance2, 'g-')
-# dis3, = ax3.plot(x_time, y_distance3, 'b-')
+dis3, = ax3.plot(x_time, y_distance3, 'b-')
 
 # Animation
 view = plt.figure()
@@ -116,24 +121,23 @@ for i in range(100):
         ax1.set_ylim(0, max_distance1)
 
     # newDis2 = SPF.getDistance(Drone2.index, Drone3.index, Drones)[1]
-    # y_distance2.append(newDis2)
-    # dis2.set_ydata(y_distance2)
-    # dis2.set_xdata(x_time)
-    # ax2.set_xlim(0, i)
-    # if newDis2 > max_distance2:
-    #     max_distance2 = newDis2
-    #     ax2.set_ylim(0, max_distance2)
+    x_pos1.append(Drone1.position[0])
+    dis2.set_ydata(x_pos1)
+    dis2.set_xdata(x_time)
+    ax2.set_xlim(0, i)
+    if Drone1.position[0] > x_pos1_max:
+        x_pos1_max = Drone1.position[0]
+        ax2.set_ylim(0, x_pos1_max)
 
-    # newDis3 = SPF.getDistance(Drone3.index, Drone1.index, Drones)[1]
-    # y_distance3.append(newDis3)
-    # dis3.set_ydata(y_distance3)
-    # dis3.set_xdata(x_time)
-    # ax3.set_xlim(0, i)
-    # if newDis3 > max_distance3:
-    #     max_distance3 = newDis3
-    #     ax3.set_ylim(0, max_distance3)
+    x_pos2.append(Drone2.position[0])
+    dis3.set_ydata(x_pos2)
+    dis3.set_xdata(x_time)
+    ax3.set_xlim(0, i)
+    if Drone2.position[0] > x_pos2_max:
+        x_pos2_max = Drone2.position[0]
+        ax3.set_ylim(0, x_pos2_max)
 
     report.canvas.draw()
     report.canvas.flush_events()
 
-    print('\n')
+plt.pause(20)

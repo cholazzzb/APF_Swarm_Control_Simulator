@@ -17,7 +17,7 @@ class Agent(object):
         self.targetIndex = 0
 
     def calculate_total_force(self):
-        return plusWithTuple(self.ObstaclePotentialForce, self.TargetPotentialForce)
+        return plusWithTuple(self.SwarmPotentialForce, plusWithTuple(self.ObstaclePotentialForce, self.TargetPotentialForce)) 
 
     def setVelocity(self, newVelocity):
         for index in range(0, len(newVelocity)):
