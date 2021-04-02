@@ -9,9 +9,7 @@ This is undergoing project
 
 ## :movie_camera: Video Link :
 [![Swarm Control with one goal(Under development)](https://img.youtube.com/vi/Tde_2Lo7RW8/1.jpg)](https://youtu.be/Tde_2Lo7RW8)
-
 [![Multiple Drone](https://img.youtube.com/vi/Tde_2Lo7RW8/2.jpg)](https://youtu.be/FwJYRlpA0gw)
-
 [![Vid3](https://img.youtube.com/vi/Tde_2Lo7RW8/3.jpg)](https://youtu.be/jNaC6HgPrvA)
 [![Vid4](https://img.youtube.com/vi/Tde_2Lo7RW8/1.jpg)](https://youtu.be/5X3YD8bPKK0)
 [![Vid5](https://img.youtube.com/vi/Tde_2Lo7RW8/1.jpg)](https://youtu.be/o0WkS64P_tc)
