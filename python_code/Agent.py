@@ -9,7 +9,7 @@ class Agent(object):
         self.positionHistory = [position]
         self.mass = mass
         self.velocity = (0, 0, 0)
-        self.maxVelocity = 0.6 # absolute value, need to check tello spec
+        self.maxVelocity = 0.3 # absolute value, need to check tello spec
         self.ObstaclePotentialForce = (0, 0, 0)
         self.SwarmPotentialForce = []
         self.TargetPotentialForce = (0, 0, 0)
@@ -48,6 +48,7 @@ class Agent(object):
         self.setVelocity(newVelocity)
 
     def move(self):
+        # print('vel', self.velocity)
         self.position = plusWithTuple(self.position, self.velocity)
         self.positionHistory.append(self.position)
 

@@ -5,7 +5,7 @@ import math
 # from numba import njit, jit, prange
 import sys
 sys.path.append('../')
-from Quadrotor import Quadrotor
+from QuadrotorARSim import QuadrotorARSim
 
 sys.path.append('../')
 from Agent import Agent
@@ -17,15 +17,12 @@ from tupleUtil import calculateLength
 radianToDegree = 180/math.pi
 degreeToRadian = math.pi/180
 
-class myPSO(object):
-    def __init__(self, simulationTime, targetOutput, min, max, responseType):
+class myPSOPosition(object):
+    def __init__(self, simulationTime, targetOutput, min, max):
         self.simulationTime = simulationTime
-        if(responseType == "theta" or responseType == "phi" or responseType == "psi"):
-            self.targetOutput = targetOutput*degreeToRadian
         self.targetOutput = targetOutput
         self.min = min
         self.max = max
-        self.responseType = responseType
         
         # For Cost Function
         self.swarmForces = []
@@ -36,57 +33,42 @@ class myPSO(object):
         self.alpha = alpha
         self.beta = beta
 
-    # k = [kp, ki, kd]
+    # k = [KPtheta, KItheta, KDtheta, KPx, KIx, KDx, 
+    #       KPphi, KIphi, KDphi, KPy, KIy, KDy, 
+    #       KPz, KIz, KDz,
+    #       KPpsi, KIpsi, KDpsi]
+
     def calculateQuadrotorResponse(self, k):
+        print('k', k)
         specs = {"mass": 0.445, "inertia": [
             0.0027, 0.0029, 0.0053], "armLength": 0.125}
         initialState = [[0.0, 0.0, 1.0], [0.0, 0.0, 0.0],
                         [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
         initialInput = [0.0, 0.0, 0.0, 0.0]
-        attitudeControllerPID = [[1.43, 0, 0.13],  # PID phi
-                                 [1.52, 0, 0.14],  # PID theta
-                                 [2.43, 0, 0.26],  # PID psi
-                                 [48.49, 14.29, 0.0]]  # PID z dot
+        attitudeControllerPID = [[k[6], k[7], k[8]],  # PID phi
+                                 [k[0], k[1], k[2]],  # PID theta
+                                 [0, 0, 0],  # PID psi
+                                 [0, 0, 0]]  # PID z dot
 
-        positionControllerPID = [[323.35, 8.38, 177.91],  # PID x
-                                [138.38, 126.43, 98.03],    # PID y
-                                [4.31, 8.1,  8.44]]  # PID z
-
-        parameterTest = {
-            "phi": [0, 0],
-            "theta": [0, 1],
-            "psi": [0, 2],
-            "zdot": [0, 3],
-
-            "x": [1, 0],
-            "y": [1, 1],
-            "z": [1, 2]
-        }
-
-        index = parameterTest.get(self.responseType)
+        positionControllerPID = [[k[3], k[4], k[5]],  # PID x
+                                 [k[9], k[10], k[11]],  # PID y
+                                [k[12], k[13], k[14]]]  # PID z
         
-        controller = [attitudeControllerPID, positionControllerPID]
-        controller[index[0]][index[1]] = [k[0], k[1], k[2]]
-
-        model = Quadrotor(0, "model", specs, initialState,
+        model = QuadrotorARSim(0, "model", specs, initialState,
                           initialInput, attitudeControllerPID, positionControllerPID)
         
-        # print('state', model.position)
-
-        targetAttitude = [0, 0, 0, 0]
-        targetPosition = [0, 0, 1]
-        target = [targetAttitude, targetPosition]
-        target[index[0]][index[1]] = self.targetOutput
+        targetIndex = 0
 
         inputPID = []
         responseValue = []
+        errorValues = []
+
+        isStable = True
 
         for iteration in self.simulationTime:
-            if(index[0] == 0):
-                model.controlAttitude(targetAttitude)
-            else:
-                model.controlPosition(targetPosition)
-
+            # print('target Index', targetIndex)
+            # model.controlPosition(self.targetOutput[targetIndex])
+            model.controlPositionAjmera(self.targetOutput[targetIndex])
             model.updateState()
             response = {
                 "phi": model.angles[0]*radianToDegree,
@@ -98,11 +80,30 @@ class myPSO(object):
                 "z": model.position[2],
             }
 
-            if response.get(self.responseType) > 100 or response.get(self.responseType) < -100:
-                return responseValue, False
+            # print('z', response.get('z'))
+            # print('theta', response.get('theta'))
+            # print('moments', model.moments)
+            # if (response.get("z") < -100 or response.get("z") > 100): 
+            if (response.get("x") > 100 or response.get("x") < -100 or response.get("y") > 100 or response.get("y") < -100 or response.get("z") > 100 or response.get("z") < -100 or response.get("phi") > 100 or response.get("phi") < -100 or response.get("theta") > 100 or response.get("theta") < -100):
+                
+                # print('moments',model.moments)
+                # print('checker theta', response.get('theta'))
+                # print('checker', response.get("theta") > 100 or response.get("theta") < -100)
+                isStable = False
+                break
+                # return responseValue, errorValues, False
 
-            responseValue.append(response.get(self.responseType, "nothing"))
-        return responseValue, True
+            responseValue.append([response.get("x"), response.get("y"), response.get("z")])
+            errorValues.append(abs(response.get("x") - self.targetOutput[targetIndex][0]) + abs(response.get("y") - self.targetOutput[targetIndex][1]) + abs(response.get("z") - self.targetOutput[targetIndex][2]))
+            # print('error', abs(response.get("x") - self.targetOutput[targetIndex][0]) + abs(response.get("y") - self.targetOutput[targetIndex][1]) + abs(response.get("z") - self.targetOutput[targetIndex][2]))
+            # print('errorx', abs(response.get("y") - self.targetOutput[targetIndex][1]))
+
+            # if (abs(response.get("x") - self.targetOutput[targetIndex][0]) + abs(response.get("y") - self.targetOutput[targetIndex][1]) + abs(response.get("z") - self.targetOutput[targetIndex][2])) < 0.3 and targetIndex < len(self.targetOutput) - 1:
+            #     targetIndex = targetIndex + 1
+
+        # print('errV', errorValues)
+        # print('err', np.sum(errorValues))
+        return np.array(responseValue), errorValues, isStable
     
     def calculateSwarmDrones(self, newParameters):    
         SPFParameter = newParameters[0:4]
@@ -153,11 +154,8 @@ class myPSO(object):
             error = np.append(error, [self.targetOutput-outputValue])
         return np.mean(abs(error))
 
-    def calculateIntegralAbsoluteError(self, outputValues):
-        error = []
-        for outputValue in outputValues:
-            error = np.append(error, [self.targetOutput-outputValue])
-        return np.sum(abs(error))
+    def calculateIntegralAbsoluteError(self, errorValue):
+        return np.sum(errorValue)
 
     # Spesific for APF with J = 1 * abs(Force) + 1 * abs(target distance(between quadrotors) - distance(between quadrotors))
     def calculateObjectiveFunction(self, outputValues):
@@ -214,10 +212,12 @@ class myPSO(object):
             # [systemResponse, isStable] = self.calculateSwarmDrones(particle_position[particle_index])
 
             # For Attitude and Position Controller
-            [systemResponse, isStable] = self.calculateQuadrotorResponse(
+            [systemResponse, errorValues, isStable] = self.calculateQuadrotorResponse(
                 particle_position[particle_index])
+
+            # print('IS STABLE', isStable)
             if isStable:
-                cost_value = cost_function(systemResponse)
+                cost_value = cost_function(errorValues)
             else:
                 cost_value = 1e100
 
@@ -237,27 +237,34 @@ class myPSO(object):
         while (iterate < total_iteration):
             for particle_index in range(particles):
                 # Count
-                # print('BEFORE particle velocity', particle_velocity[particle_index])
-
                 particle_velocity[particle_index] = w*particle_velocity[particle_index] + c1*random.random()*(
                     particle_position_best[particle_index]-particle_position[particle_index]) + c2*random.random()*(global_best_position-particle_position[particle_index])
 
-                # print('AFTER particle velocity', particle_velocity[particle_index])
+                # print('vel', particle_velocity)
 
                 particle_position[particle_index] = np.round(particle_velocity[particle_index] + \
                     particle_position[particle_index], 2)
 
+                particle_position[particle_position < 0] = 0
+
                 # For Swarm
                 # [systemResponse, isStable] = self.calculateSwarmDrones(particle_position[particle_index])
                 # For Attitude and Position Controller
-                [systemResponse, isStable] = self.calculateQuadrotorResponse(
+                [systemResponse, errorValues, isStable] = self.calculateQuadrotorResponse(
                     particle_position[particle_index])
+                # print('IS STABLE', isStable)
+                # print("ERRRR", errorValues)
                 if isStable:
-                    cost_value = cost_function(systemResponse)
+                    cost_value = cost_function(errorValues)
                 else:
                     cost_value = 1e100
 
                 # Update
+
+                # Check current particle fit value and cost value to debug the error
+                # print('----------')
+                # print('particle fit value', particle_fit_value[particle_index])
+                # print('cost value', cost_value, particle_position[particle_index])
                 if(particle_fit_value[particle_index] > cost_value):
                     particle_fit_value[particle_index] = cost_value
                     particle_position_best[particle_index] = np.copy(
@@ -294,12 +301,20 @@ class myPSO(object):
         # [bestResponse, isStable] = self.calculateSwarmDrones(self.bestParameter)
 
         # For Attitude and Position Controller
-        plt.title("Response and PID (from PSO parameter)")
-        [bestResponse, isStable] = self.calculateQuadrotorResponse(
+        plt.title("Best Response and PID (from PSO parameter)")
+        [bestResponse, errorValues, isStable] = self.calculateQuadrotorResponse(
             self.bestParameter)
-        plt.plot(self.simulationTime, bestResponse, label="Best Response")
-        plt.plot(self.simulationTime, self.targetOutput *
-                 np.ones(self.simulationTime.shape), label="Set Point", color="red")
-        plt.legend(loc='upper left')
+        plt.plot(self.simulationTime, bestResponse[:, 0], label="x Pos", color="red")
+        plt.plot(self.simulationTime, bestResponse[:, 1], label="y Pos", color="yellow")
+        plt.plot(self.simulationTime, bestResponse[:, 2], label="z Pos", color="green")
+
+        plt.plot(self.simulationTime, self.targetOutput[0][0] *
+                 np.ones(self.simulationTime.shape), label="Set Point x", color="black")
+        plt.plot(self.simulationTime, self.targetOutput[0][1] *
+                 np.ones(self.simulationTime.shape), label="Set Point y", color="purple")
+        plt.plot(self.simulationTime, self.targetOutput[0][2] *
+                 np.ones(self.simulationTime.shape), label="Set Point z", color="blue")
+
+        plt.legend(loc='lower right')
         plt.show()
         plt.pause(100)

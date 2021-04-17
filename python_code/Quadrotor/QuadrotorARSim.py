@@ -1,4 +1,4 @@
-# Position Controller use the Cascade Design
+# Position Controller output are directly to the thrust and moment
 
 import math
 import numpy as np
@@ -23,7 +23,7 @@ def ETBM(angles, vector):
 
     return rotationMatrix.dot(vector)
 
-class QuadrotorAR(object):
+class QuadrotorARSim(object):
     def __init__(self, index, name, specs, initialState, initialInput, attitudeControllerPID, positionControllerPID):
         self.index = index
         self.name = name
@@ -138,6 +138,19 @@ class QuadrotorAR(object):
         # Swarm Control
         self.targetPosition = []
 
+        # Ajmera Position Control
+        self.x_des_prev = 0
+        self.x_des_prev2 = 0
+        self.x_des_sum = 0
+        self.PID_theta_err_sum = 0
+        self.xdesdotx_sum = 0
+
+        self.y_des_prev = 0
+        self.y_des_prev2 = 0
+        self.y_des_sum = 0
+        self.PID_phi_err_sum = 0
+        self.ydesdoty_sum = 0
+
     def calculateFrictionForce(self, velocity):
         if velocity > 0:
             # print('friction Force', -5*(velocity**2))
@@ -187,6 +200,8 @@ class QuadrotorAR(object):
                 moment = self.moment_max
             if moment < self.moment_min:
                 moment = self.moment_min
+
+        print("moment", self.moments)
 
         # Translational Motion
         self.state_dot[0] = self.position_dot
@@ -275,8 +290,6 @@ class QuadrotorAR(object):
         self.z_err = self.z_err*-1
         # print('error after', self.x_err, self.y_err, self.z_err)
 
-        attitudeTarget = [0, 0, 0, 0]  # psi theta phi zdot (degree and m/s)
-
         # Yaw Control
         yaw_error = 0
         distance_err = (math.sqrt(self.x_err**2 + self.y_err**2))
@@ -285,7 +298,9 @@ class QuadrotorAR(object):
         # print('error yaw', yaw_error*radianToDegree)
         if self.x_err < 0 :
             yaw_error = yaw_error*-1
-        attitudeTarget[2] = (yaw_angle_rad + yaw_error)*radianToDegree
+        self.psi_err = (yaw_angle_rad + yaw_error)-self.angles[2]
+
+        attitudeTarget = [0,0,0,0]
 
         if abs(math.atan2(self.x_err, self.y_err)*radianToDegree) < 1:
             attitudeTarget[0] = self.KP_y * self.y_err
@@ -308,12 +323,11 @@ class QuadrotorAR(object):
 
             self.z_err_prev = self.z_err
             self.z_err_sum = self.z_err_sum + self.z_err
-
-        # print('Current Angles', np.array(self.angles)*radianToDegree)
-        # print('Attitude Target', attitudeTarget)
+        
         self.controlAttitude(attitudeTarget)
-
-        # # Control y pos
+        # else:
+        ## Using Ajmera Technique
+        # Control y pos
         # self.y_err = positionTarget[1] - self.position[1] # / m
 
         # y_des_dot = (self.y_err)/self.dt # m/s
@@ -321,10 +335,11 @@ class QuadrotorAR(object):
 
         # self.phi_pos_err = self.KP_y*self.y_err + self.KI_y * self.y_err_sum + \
         #     self.KD_y*(y_des_dot - self.position_dot[1]) - self.angles[0]
+        
         # self.moments[0] = self.KP_phi * (self.phi_pos_err)
         # + self.KI_phi*(self.phi_pos_err_sum) + \
         #     self.KD_phi * (self.KP_y*self.y_dot_err + self.KI_y*self.y_dot_err_sum+self.KD_phi * ((y_des_dot -
-        #                                                                                            self.y_des_dot_prev)/self.dt - (self.position_dot[1] - self.y_dot_prev)/self.dt) - self.angles_dot[1])
+        #                                                                                         self.y_des_dot_prev)/self.dt - (self.position_dot[1] - self.y_dot_prev)/self.dt) - self.angles_dot[1])
         # self.y_dot_prev = self.position_dot[1]
         # self.y_des_dot_prev = y_des_dot
 
@@ -355,27 +370,37 @@ class QuadrotorAR(object):
 
         # self.theta_pos_err_sum = self.theta_pos_err_sum + self.theta_pos_err
 
-        # # Control yaw
-        # self.moments[2] = self.KP_psi * self.psi_err + self.KI_psi*self.psi_err_sum + \
-        #     self.KD_psi * (self.psi_err - self.psi_err_prev)/self.dt
+        # Control yaw
+        self.moments[2] = self.KP_psi * self.psi_err + self.KI_psi*self.psi_err_sum + \
+            self.KD_psi * (self.psi_err - self.psi_err_prev)/self.dt
 
-        # # Control z
-        # self.z_err = positionTarget[2] - self.position[2]
-        # z_des_dot = (positionTarget[2] - self.position[2])
+        # Control z
+        self.z_err = positionTarget[2] - self.position[2]
+        # z_des_dot = self.KP_z * self.z_err \
+        #     + self.KI_z * self.z_err_sum \
+        #     + self.KD_z * (self.z_err - self.z_err_prev) / self.dt
+
+        self.z_err_prev = self.z_err
+        self.z_err_sum = self.z_err_sum + self.z_err
+
         # self.z_dot_err = z_des_dot - self.position_dot[2]
 
         # self.z_pos_err = self.KP_z*self.z_err + self.KI_z * self.z_err_sum + \
         #     self.KD_z*(z_des_dot - self.position_dot[2]) - self.position_dot[2]
 
-        # self.thrust = self.KP_zdot * self.z_pos_err
-        # + self.KI_zdot * self.z_pos_err_sum
-        # + self.KD_zdot*(self.KP_z * self.z_dot_err + self.KI_z *self.z_dot_err_sum + self.KD_zdot *(
-        #     (z_des_dot - self.z_des_dot_prev)/self.dt - (self.position_dot[2] - self.z_dot_prev)/self.dt)- (self.position_dot[2] - self.z_dot_prev)/self.dt)
+        self.thrust = self.KP_z * self.z_err \
+            + self.KI_z * self.z_err_sum \
+            + self.KD_z * (self.z_err - self.z_err_prev) / self.dt
 
+        # print('z', self.position[2])
+        # print('z PID', self.KP_zdot, self.KI_zdot, self.KD_zdot)
         # print('z_des_dot', z_des_dot)
         # print('z_dot_real', self.position_dot[2])
         # print('zdot_err', self.z_dot_err)
-        # print('thrust before', self.thrust)
+        # print('z dot err sum', self.z_dot_err_sum)
+        # print('z dot err prev', self.z_dot_err_prev)
+        # print('current thrust', self.thrust)
+        # print('------------------')
 
         # self.z_dot_prev = self.position_dot[2]
         # self.z_des_dot_prev = z_des_dot
@@ -384,6 +409,47 @@ class QuadrotorAR(object):
         # self.z_dot_err_sum = self.z_dot_err_sum + self.z_dot_err
 
         # self.z_pos_err_sum = self.z_pos_err_sum + self.z_dot_err
+
+    def controlPositionAjmera(self, positionTarget):
+        # X
+        self.x_err = positionTarget[0] - self.position[0]
+
+        self.moments[1] = self.KP_x * (self.KP_theta * self.x_err + self.KI_theta * self.x_err_sum + self.KD_theta * (((positionTarget[0] - self.x_des_prev)/self.dt) - self.position_dot[0]) - self.angles[1]) + \
+            self.KI_x * (self.PID_theta_err_sum) + \
+                self.KD_x * (self.KP_theta * ((positionTarget[0] - self.x_des_prev)/self.dt - self.position_dot[0]) + self.KI_theta * (self.xdesdotx_sum) + self.KD_theta * (((positionTarget[0]-self.x_des_prev)/self.dt) - ((self.x_des_prev-self.x_des_prev2)/self.dt) / self.dt ) - self.angles_dot[1])
+        
+        self.xdesdotx_sum = self.xdesdotx_sum + (((positionTarget[0] - self.x_des_prev)/self.dt) - self.position_dot[0])
+        self.PID_theta_err_sum = self.PID_theta_err_sum + (self.KP_theta * self.x_err + self.KI_theta * self.x_err_sum + self.KD_theta * (((positionTarget[0] - self.x_des_prev)/self.dt) - self.position_dot[0]) - self.angles[1])
+        self.x_des_prev2 = self.x_des_prev
+        self.x_des_prev = positionTarget[0]
+        self.x_err_sum = self.x_err_sum + self.x_err
+        self.x_err_prev = self.x_err
+
+        # Y
+        self.y_err = positionTarget[1] - self.position[1]
+
+        self.moments[0] = self.KP_y * (self.KP_phi * self.y_err + self.KI_phi * self.y_err_sum + self.KD_phi * (((positionTarget[1] - self.y_des_prev)/self.dt) - self.position_dot[1]) - self.angles[0]) + \
+            self.KI_y * (self.PID_phi_err_sum) + \
+                self.KD_y * (self.KP_phi * ((positionTarget[1] - self.y_des_prev)/self.dt - self.position_dot[1]) + self.KI_phi * (self.ydesdoty_sum) + self.KD_phi * (((positionTarget[1]-self.y_des_prev)/self.dt) - ((self.y_des_prev-self.y_des_prev2)/self.dt) / self.dt ) - self.angles_dot[0])
+        
+        self.ydesdoty_sum = self.ydesdoty_sum + (((positionTarget[1] - self.y_des_prev)/self.dt) - self.position_dot[1])
+        self.PID_phi_err_sum = self.PID_phi_err_sum + (self.KP_phi * self.y_err + self.KI_phi * self.y_err_sum + self.KD_phi * (((positionTarget[1] - self.y_des_prev)/self.dt) - self.position_dot[1]) - self.angles[0])
+        self.y_des_prev2 = self.y_des_prev
+        self.y_des_prev = positionTarget[1]
+        self.y_err_sum = self.y_err_sum + self.y_err
+        self.y_err_prev = self.y_err
+
+        # Z
+        self.z_err = positionTarget[2] - self.position[2]
+        self.thrust = self.KP_z * self.z_err + self.KI_z * self.z_err_sum + self.KD_z * (self.z_err - self.z_err_prev)/self.dt
+        self.z_err_sum = self.z_err_sum + self.z_err
+        self.z_err_prev = self.z_err
+
+        # Yaw
+        if False:
+            self.moments[2] = self.KP_psi * (1) + \
+                self.KI_psi * (1) + \
+                    self.KD_psi * (1)
 
     def connectToSwarmController(self, SwarmController):
         self.swarmAgent = Agent(

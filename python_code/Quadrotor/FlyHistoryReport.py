@@ -18,7 +18,7 @@ class Arrow3D(FancyArrowPatch):
         FancyArrowPatch.draw(self, renderer)
 
 
-class FlyHistory(object):
+class FlyHistoryReport(object):
     # xlim, ylim, zlim = array -> [lower, upper]
     def __init__(self, xlim, ylim, zlim):
         fig = plt.figure(figsize=(15, 15))
@@ -39,8 +39,8 @@ class FlyHistory(object):
     # color = string -> "red" or "g"
     def addObject(self, xPos, yPos, zPos, size, color, opacity):
         self.ax.plot(xPos.pop(), yPos.pop(), zPos.pop(), 'o',
-                     markersize=size*100, color='black', alpha=1)
-        self.ax.plot(xPos, yPos, zPos, 'o', markersize=size*100,
+                     markersize=1, color='black', alpha=1)
+        self.ax.plot(xPos, yPos, zPos, 'o', markersize=1,
                      color=color, alpha=opacity)
 
     def draw(self):

@@ -6,13 +6,17 @@ import math
 import sys
 sys.path.append('../')
 from Quadrotor import Quadrotor
+from Ship import Ship
+from Bird import Bird
 
 sys.path.append('../')
 from Agent import Agent
+from SwarmController import SwarmController
 from SwarmPotentialField import SwarmPotentialField
 from Target import Target
 from TargetPotentialField import TargetPotentialField
 from tupleUtil import calculateLength
+from tupleUtil import minusWithTuple
 
 radianToDegree = 180/math.pi
 degreeToRadian = math.pi/180
@@ -28,13 +32,22 @@ class myPSOAPF(object):
         self.responseType = responseType
         
         # For Cost Function
-        self.swarmForces = []
+        self.totalVelocity = []
+        self.averageTargetSwarmDistance = []
         self.alpha = 1
         self.beta = 1
+        self.gamma = 1
 
-    def setCostFunctionWeight(self, alpha, beta):
+    def setCostFunctionWeight(self, alpha, beta, gamma):
         self.alpha = alpha
+        self.fitnessAlpha = 0
+        self.bestFitnessAlpha = 0
         self.beta = beta
+        self.fitnessBeta = 0
+        self.bestFitnessBeta = 0
+        self.gamma = gamma
+        self.fitnessGamma = 0
+        self.bestFitnessGamma = 0
 
     # k = [kp, ki, kd]
     def calculateQuadrotorResponse(self, k):
@@ -85,7 +98,12 @@ class myPSOAPF(object):
             else:
                 model.controlPosition(targetPosition)
 
-            model.updateState()
+            try:
+                model.updateState()
+            except:
+                print("NOT STABLE")
+                return responseValue, False
+
             response = {
                 "phi": model.angles[0]*radianToDegree,
                 "theta": model.angles[1]*radianToDegree,
@@ -102,47 +120,99 @@ class myPSOAPF(object):
             responseValue.append(response.get(self.responseType, "nothing"))
         return responseValue, True
     
-    def calculateSwarmDrones(self, newParameters):    
+    def calculateSwarmDrones(self, newParameters):  
+        # min_allowable_dist = self.targetOutput
+        min_allowable_dist = 1  
+
         SPFParameter = newParameters[0:4]
-        # TPFParameter = newParameters[4:6]
+        SPFConfig = {
+            "min_allowable_dist": min_allowable_dist
+        }
+        TPFConfig = {
+            "damping_factor": newParameters[4], 
+            "gain":newParameters[5], 
+            "target_detecting_range":1
+        }
+        OPFConfig = {
+            "positiveGain1": newParameters[6], 
+            "positiveGain2":newParameters[7], 
+            "detecting_range": 1
+            }
 
         # Setup
-        min_allowable_dist = self.targetOutput
+        specs = {"mass": 0.445, "inertia": [
+            0.0027, 0.0029, 0.0053], "armLength": 0.125}
+        initialInput = [0.0, 0.0, 0.0, 0.0]
+        attitudeControllerPID = [[1.43, 0, 0.13],  # PID phi
+                                    [1.52, 0, 0.14],  # PID theta
+                                    [2.43, 0, 0.26],  # PID psi
+                                    [48.49, 14.29, 0.0]]  # PID z dot
+
+        positionControllerPID = [[323.35, 8.38, 177.91],  # PID x
+                                [138.38, 126.43, 98.03],    # PID y
+                                [4.31, 8.1,  8.44]]  # PID z
+
         Drones = []
-        position_drone1 = [(0, 0, 5)]
-        Drone1 = Agent(0, position_drone1[0], 1)
+        position_drone1 = (1.1, 5, 5)
+        Drone1 = Agent(0, position_drone1, 1)
         Drones.append(Drone1)
+        initialState1 = [[1.0, 5.0, 5.0], [0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
 
-        position_drone2 = [(10, 0, 5)]
-        Drone2 = Agent(1, position_drone2[0], 1)
-        Drones.append(Drone2) 
+        AR1 = Quadrotor(0, "AR1", specs, initialState1, initialInput, attitudeControllerPID, positionControllerPID)
 
-        SPF = SwarmPotentialField(min_allowable_dist)
-        SPF.setup(SPFParameter)
+        position_drone2 = (0, 5, 5)
+        Drone2 = Agent(1, position_drone2, 1)
+        Drones.append(Drone2)
+        initialState2 = [[0.0, 5.0, 5.0], [0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
 
-        # Ship = Target([5,10,5])
-        # TPF = TargetPotentialField(TPFParameter[0], TPFParameter[1], 1)
-        # Ships = [Ship]
+        AR2 = Quadrotor(0, "AR2", specs, initialState2, initialInput, attitudeControllerPID, positionControllerPID)
+
+        Bird1 = Bird([2, 4.7, 5])
+        Ship1 = Ship([3,5,5], 1)
+
+        SwarmController1 = SwarmController(TPFConfig, OPFConfig, SPFConfig)
+        SwarmController1.configureSPF(SPFParameter)
+
+        SwarmController1.addAgent(Drone1)
+        SwarmController1.addAgent(Drone2)
+        SwarmController1.addObstacle(Bird1)
+
+        # Connect 
+        AR1.connectToSwarmController(SwarmController1)
+        AR2.connectToSwarmController(SwarmController1)
+        Bird1.connectToSwarmController(SwarmController1)
+        Ship1.connectToSwarmController(SwarmController1)
 
         responseValue = []
+        self.totalVelocity = []
+        self.averageTargetSwarmDistance = []
 
+        min_disTargetSwarm = 100000
         for iteration in self.simulationTime:
-            Drone1.SwarmPotentialForce = SPF.calculate_total_swarm_field_force(Drone1.index, Drones)
-            Drone2.SwarmPotentialForce = SPF.calculate_total_swarm_field_force(Drone2.index, Drones)
+            SwarmController1.calculateAgentsForces()
+            try:
+                totalVelocity1 = AR1.controlSwarm(SwarmController1)
+                totalVelocity2 = AR2.controlSwarm(SwarmController1)
+            except:
+                print("NOT STABLE")
+                return responseValue, False 
 
-            # Drone1.TargetPotentialForce = TPF.calculate_target_force(Drone1.index, 0, Drones, Ships)
-            # Drone2.TargetPotentialForce = TPF.calculate_target_force(Drone2.index, 0, Drones, Ships)
-
-            self.swarmForces.append(calculateLength(Drone1.calculate_total_force()))
-            # print('swarmForces', calculateLength(Drone1.calculate_total_force()))
-            Drone1.calculateVelocity(Drone1.calculate_total_force())
-            Drone1.move()
-            Drone2.calculateVelocity(Drone2.calculate_total_force())
-            Drone2.move()
-
-            [distance_tuple, distance] = SPF.getDistance(0, 1, Drones) 
+            [distance_tuple, distance] = SwarmController1.SPF.getDistance(0, 1, Drones) 
+            # print('distanceBetween', distance)
             responseValue.append(distance) 
-            
+            # print("VELOCITY", calculateLength(totalVelocity1) + calculateLength(totalVelocity2))
+            self.totalVelocity.append(abs(calculateLength(totalVelocity2)) + abs(calculateLength(totalVelocity2)))
+            targetPosition = (3,5,5)
+            tupleDistance1 = minusWithTuple(targetPosition, (AR1.position[0], AR1.position[1], AR1.position[2]))
+            tupleDistance2 = minusWithTuple(targetPosition, (AR2.position[0], AR2.position[1], AR2.position[2]))
+            averageDistance = math.sqrt(abs(sum(tuple(pow(x, 2) for x in tupleDistance1)))) + math.sqrt(abs(sum(tuple(pow(x, 2) for x in tupleDistance2))))
+            # print('dis target swarms', averageDistance)
+            if averageDistance < min_disTargetSwarm:
+                min_disTargetSwarm = averageDistance
+            self.averageTargetSwarmDistance.append(averageDistance)
+        print('min dis target swarm', min_disTargetSwarm)
         return responseValue, True
 
     def calculateMeanAbsoluteError(self, outputValues):
@@ -161,8 +231,12 @@ class myPSOAPF(object):
     def calculateObjectiveFunction(self, outputValues):
         error = []
         for outputValue in outputValues:
-            error = np.append(error, [self.targetOutput-outputValue])
-        return self.alpha * np.sum(abs(error)) + self.beta * np.sum(self.swarmForces)
+            error = np.append(error, [abs(self.targetOutput-outputValue)])
+            # print('distance dev', [abs(self.targetOutput-outputValue)])
+        self.fitnessAlpha = self.alpha * np.sum(abs(error)) # distance between quadrotor
+        self.fitnessBeta = self.beta * np.sum(self.totalVelocity) / 2
+        self.fitnessGamma = self.gamma * np.sum(self.averageTargetSwarmDistance) / 2
+        return self.fitnessAlpha + self.fitnessBeta + self.fitnessGamma
 
     def particleSwarmOptimization(self, w, c1, c2, particles,  totalParameters, min_param_value, max_param_value, total_iteration, isMinimize, costFunctionType):
         costFunctionList = {
@@ -218,6 +292,8 @@ class myPSOAPF(object):
             else:
                 cost_value = 1e100
 
+            print('CF', cost_value)
+
             # Update
             if(particle_fit_value[particle_index] > cost_value):
                 particle_fit_value[particle_index] = cost_value
@@ -226,6 +302,9 @@ class myPSOAPF(object):
 
             if(global_fit_value > cost_value):
                 global_fit_value = cost_value
+                self.bestFitnessAlpha = self.fitnessAlpha
+                self.bestFitnessBeta = self.fitnessBeta   
+                self.bestFitnessGamma = self.fitnessGamma
                 global_best_position = np.copy(
                     particle_position[particle_index])
 
@@ -250,6 +329,7 @@ class myPSOAPF(object):
                 else:
                     cost_value = 1e100
 
+                print('CF', cost_value)
                 # Update
                 if(particle_fit_value[particle_index] > cost_value):
                     particle_fit_value[particle_index] = cost_value
@@ -258,6 +338,9 @@ class myPSOAPF(object):
 
                 if(global_fit_value > cost_value):
                     global_fit_value = cost_value
+                    self.bestFitnessAlpha = self.fitnessAlpha
+                    self.bestFitnessBeta = self.fitnessBeta
+                    self.bestFitnessGamma = self.fitnessGamma
                     global_best_position = np.copy(
                         particle_position[particle_index])
 
@@ -270,9 +353,16 @@ class myPSOAPF(object):
             iterate = iterate+1
             print("Iteration: ", iterate, " -> Global best fitness: ",
                   global_fit_value, ", Parameters :",  global_best_position)
+            print("Alpha fitness ->", self.bestFitnessAlpha)
+            print("Beta fitness ->", self.bestFitnessBeta)
+            print("Gamma fitness ->", self.bestFitnessGamma)
+  
 
         print("Total iteration -> ", iterate)
         print("Best fitness -> ", global_fit_value)
+        print("Alpha fitness ->", self.bestFitnessAlpha)
+        print("Beta fitness ->", self.bestFitnessBeta)
+        print("Gamma fitness ->", self.bestFitnessGamma)
         print("Best parameter -> ", global_best_position)
         self.bestParameter = global_best_position
 

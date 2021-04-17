@@ -85,22 +85,22 @@ birdSimulator.initialDrawing("brown", "brown")
 
 quadrotorView.show()
 
-for i in range(1000):
+for i in range(200):
     print('-------Time:', Tello1.t, '-------')
     print('---------------------------------')
 
     # [phi, theta, psi, zdot] (degree)
-    # Tello1.controlAttitude([0, 0, 45, 0])
-    # Tello2.controlAttitude([10, 0, 0, 5])
+    Tello1.controlAttitude([0, 0, 45, 0])
+    Tello2.controlAttitude([10, 10, 0, 5])
     # Tello3.controlAttitude([0, 0, 30, 3])
 
     # Tello1.controlPosition([0.7, 1, 5])
     # Tello2.controlPosition([6,6,0])
     # Tello3.controlPosition([0,0,0])
 
-    SwarmController1.calculateAgentsForces()
-    Tello1.controlSwarm(SwarmController1)
-    Tello2.controlSwarm(SwarmController1)
+    # SwarmController1.calculateAgentsForces()
+    # Tello1.controlSwarm(SwarmController1)
+    # Tello2.controlSwarm(SwarmController1)
 
     # Tello limit ?
     Tello1.updateState()

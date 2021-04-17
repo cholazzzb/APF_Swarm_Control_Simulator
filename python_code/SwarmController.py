@@ -12,6 +12,9 @@ class SwarmController(object):
         self.OPF = ObstaclePotentialField(OPFconfig["positiveGain1"], OPFconfig["positiveGain2"], OPFconfig["detecting_range"])
         self.SPF = SwarmPotentialField(SPFconfig["min_allowable_dist"])
 
+    def configureSPF(self, configuration):
+        self.SPF.setup(configuration)
+
     def addAgent(self, newAgent):
         self.agents.append(newAgent)
 
@@ -26,3 +29,7 @@ class SwarmController(object):
             drone.TargetPotentialForce = self.TPF.calculate_target_force(drone.index, 0, self.agents, self.targets)
             drone.SwarmPotentialForce = self.SPF.calculate_total_swarm_field_force(drone.index, self.agents)
             drone.ObstaclePotentialForce = self.OPF.calculate_agent_obstacles_force(self.agents[drone.index], self.obstacles)
+            # print('----- Agent', drone.index, '-----')
+            # print('TPF', drone.TargetPotentialForce)
+            # print('SPF', drone.SwarmPotentialForce)
+            # print('OPF', drone.ObstaclePotentialForce)

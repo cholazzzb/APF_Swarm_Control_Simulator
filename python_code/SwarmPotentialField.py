@@ -28,17 +28,25 @@ class SwarmPotentialField(object):
         self.damping_factor = newDampingFactor
 
     def getDistance(self, agent1_index, agent2_index, Agents):
+        # print("distance_tuple", Agents[agent1_index].position)
         distance_tuple = minusWithTuple(
             Agents[agent1_index].position, Agents[agent2_index].position)
         distance = math.sqrt(
             abs(sum(tuple(pow(x, 2) for x in distance_tuple))))
         return (distance_tuple, distance)
 
+    def getDistance2(self, pos1, pos2):
+        distance_tuple = minusWithTuple(
+            pos1, pos2)
+        distance = math.sqrt(
+            abs(sum(tuple(pow(x, 2) for x in distance_tuple))))
+        return distance
+
     def calculate_attractive_force(self, agent1_index, agent2_index, Agents):
         (distance_tuple, distance) = self.getDistance(agent1_index, agent2_index, Agents)
         # print('distance between(', agent1_index, ',' , agent2_index, '): ', distance)
 
-        if distance < self.min_allowable_dist:
+        if distance < self.min_allowable_dist - self.allowable_dist_range:
             try:
                 self.swarm_force = timesWithInteger(
                     distance_tuple,
