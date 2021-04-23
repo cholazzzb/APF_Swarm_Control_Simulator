@@ -9,17 +9,31 @@ from Agent import Agent
 radianToDegree = 180/math.pi
 degreeToRadian = math.pi/180
 
-# Rotation Matrix -> ETBM (Earth To Body Matrix)
-def ETBM(angles, vector):
-    phi = angles[0]
-    theta = angles[1]
-    psi = angles[2]
-    rotationMatrix = np.array([
-            [math.cos(psi)*math.cos(theta), math.sin(psi)*math.cos(theta), -math.sin(theta)],
-            [-math.sin(psi)*math.cos(phi)+math.cos(psi)*math.sin(theta)*math.sin(phi), math.cos(psi)*math.cos(phi)+math.sin(psi)*math.sin(theta)*math.sin(phi), math.cos(theta)*math.sin(phi)],
-            [math.sin(psi)*math.sin(phi)+math.cos(phi)*math.sin(theta)*math.cos(phi), -math.cos(psi)*math.sin(phi)+math.sin(psi)*math.sin(theta)*math.cos(phi), math.cos(theta)*math.cos(phi)]])
+# Rotation Matrix -> QTGM (Quadrotor To Global Matrix)
+'''
+phi =
+theta =
+psi = + -> Counter-clockwise (rotate quad coordinate to global coordinate in counter-clockwise in this degree)
+'''
+# Rotation Matrix -> QTGM (Quadrotor To Global Matrix) Only from Yaw (Psi)
+def QTGMRotationMatrix(psi):
+    return np.array([
+            [math.cos(psi), -math.sin(psi), 0],
+            [math.sin(psi), math.cos(psi), 0],
+            [0, 0, 1]])
 
-    return rotationMatrix.dot(vector)
+def QTGM(angles, vector):
+    psi = angles[2]
+    rotationMatrix = QTGMRotationMatrix(psi)
+
+    return np.round(rotationMatrix.dot(vector), 2)
+
+# Global to Quadrotor Coordinate
+def GTQM(angles, vector):
+    psi = angles[2]
+    rotationMatrix = QTGMRotationMatrix(psi).T
+
+    return np.round(rotationMatrix.dot(vector), 2)
 
 class Quadrotor(object):
     def __init__(self, index, name, specs, initialState, initialInput, attitudeControllerPID, positionControllerPID):
@@ -137,7 +151,10 @@ class Quadrotor(object):
         self.targetPosition = []
 
         # AR max angles
-        self.max_phi_theta = 30
+        self.max_phi_theta_psi = 30*degreeToRadian #degree
+
+        # Yaw Control
+        self.yaw_target = 0
 
     def calculateFrictionForce(self, velocity):
         if velocity > 0:
@@ -159,13 +176,13 @@ class Quadrotor(object):
         # Quadrotor Body (Rotor), format: ([x,y,z])
         # Using Rotation Matrix
         # direction : +x
-        rotor1 = self.position + ETBM(self.angles, np.array([self.armLength, 0, 0]))
+        rotor1 = self.position + QTGM(self.angles, np.array([self.armLength, 0, 0]))
         # direction : -x
-        rotor2 = self.position + ETBM(self.angles, np.array([-self.armLength, 0, 0]))
+        rotor2 = self.position + QTGM(self.angles, np.array([-self.armLength, 0, 0]))
         # direction : +y (Front)
-        rotor3 = self.position + ETBM(self.angles, np.array([0, self.armLength, 0]))
+        rotor3 = self.position + QTGM(self.angles, np.array([0, self.armLength, 0]))
         # direction : -y
-        rotor4 = self.position + ETBM(self.angles, np.array([0, -self.armLength, 0]))
+        rotor4 = self.position + QTGM(self.angles, np.array([0, -self.armLength, 0]))
 
         # Format : [front rotor, otherRotors]
         return np.array([[rotor3[0], rotor3[1], rotor3[2]], [[rotor1[0], rotor2[0], rotor4[0]], [rotor1[1], rotor2[1], rotor4[1]], [rotor1[2], rotor2[2], rotor4[2]]]], dtype='object')
@@ -208,11 +225,17 @@ class Quadrotor(object):
         p = self.angles_dot[0]
         q = self.angles_dot[1]
         r = self.angles_dot[2]
+        # try:
+        # print('ANGLES', np.round(self.angles*radianToDegree, 2))
+
         self.state_dot[2][0] = p + \
             math.sin(psi)*math.tan(theta)*q+math.cos(phi)*math.tan(theta)*r
         self.state_dot[2][1] = math.cos(phi)*q-math.sin(phi)*r
         self.state_dot[2][2] = math.sin(
             phi)/math.cos(theta)*q+math.cos(phi)/math.cos(theta)*r
+        # except:
+            # print("ERROR in calculate Rotational Motion, Quadrotor index:", self.index)
+            # print('ANGLES', self.angles)
 
         Ixx = self.inertia[0]
         Iyy = self.inertia[1]
@@ -220,6 +243,14 @@ class Quadrotor(object):
         self.state_dot[3][0] = (Iyy-Izz)/Ixx*q*r+self.moments[0]/Ixx
         self.state_dot[3][1] = (Izz-Ixx)/Iyy*r*p+self.moments[1]/Iyy
         self.state_dot[3][2] = (Ixx-Iyy)/Izz*p*q+self.moments[2]/Izz
+
+        # print("WTF", self.index ,self.state_dot[2][2])
+        # print("HMM", phi, math.sin(
+        #     phi))
+        # print("CAUSE", self.state_dot[3][2])
+        # if r*radianToDegree > 0 :
+        #     sys.exit('WTFF')
+        
 
         # Update the state
         self.position = self.position + self.state_dot[0] * self.dt
@@ -268,48 +299,75 @@ class Quadrotor(object):
         self.z_dot_err_prev = self.z_dot_err
         self.z_dot_err_sum = self.z_dot_err_sum + self.z_dot_err
 
-    def controlPosition(self, positionTarget):
-        # yaw_angle_rad = self.angles[2]
-        # Kompensasi karena sumbu z dibalik
-        # error = [positionTarget[1] - self.position[1], positionTarget[0] - self.position[0], -positionTarget[2] + self.position[2]]
-        # Convert to quadrotor coordinate frame
-        # [self.y_err, self.x_err, self.z_err] = ETBM(self.angles, error) # Because the z is reversed from bottom to top
-        # self.x_err = round(self.x_err)
-        # self.y_err = round(self.y_err, 1)
-        # self.z_err = self.z_err*-1
-        # print('error after', self.x_err, self.y_err, self.z_err)
-        self.x_err = positionTarget[0] - self.position[0]
-        self.y_err = positionTarget[1] - self.position[1]
-        self.z_err = positionTarget[2] - self.position[2]
-
-        attitudeTarget = [0, 0, 0, 0]  # psi theta phi zdot (degree and m/s)
+    def controlPositionYaw(self, positionTarget, yawTarget):
+        # print('---- POSITION CONTROLLER QUADROTOR- ', self.index, ' ----')
 
         # Yaw Control
-        # yaw_error = 0
-        # distance_err = (math.sqrt(self.x_err**2 + self.y_err**2))
-        # if distance_err > 3:
-        #     yaw_error = math.acos((self.y_err/distance_err))
-        # print('error yaw', yaw_error*radianToDegree)
-        # if self.x_err < 0 :
-        #     yaw_error = yaw_error*-1
-        # attitudeTarget[2] = (yaw_angle_rad + yaw_error)*radianToDegree
+        distanceVector = positionTarget - self.position
+        distanceVal = math.sqrt(distanceVector[0]**2 + distanceVector[1]**2)
+      
+        ### Quad Coordinate (QC)
+        quadPosQC = GTQM(self.angles, self.position)
+        targetPosQC = GTQM(self.angles, positionTarget)
+        distanceVectorQC = targetPosQC - quadPosQC
+      
+        # print('yaw_target', yawTarget)
 
-        # print('tetst', abs(math.atan2(self.x_err, self.y_err)*radianToDegree))
-        # if abs(math.atan2(self.x_err, self.y_err)*radianToDegree) < 1:
-        attitudeTarget[0] = self.KP_y * self.y_err
-        + self.KI_y * self.y_err_sum
-        + self.KD_y * (self.y_err - self.y_err_prev) / self.dt
+        # print('--- GLOBAL COORDINATE ---')
+        # print('quad pos', np.round(self.position, 2))
+        # print('positionTarget', positionTarget, )
+        # print('distanceVector', distanceVector)
+        # print('distanceVal', round(distanceVal*100)/100)
 
-        self.y_err_prev = self.y_err
-        self.y_err_sum = self.y_err_sum + self.y_err
+        # print('--- QUADROTOR COORDINATE ---')
+        # print("quadPosQC", quadPosQC)
+        # print('targetPosQC', targetPosQC)
+        # print('distanceVectorQC', distanceVectorQC)
 
-        attitudeTarget[1] = self.KP_x * self.x_err
-        + self.KI_x * self.x_err_sum
-        + self.KD_x * (self.x_err - self.x_err_prev) / self.dt
+        attitudeTarget = [0.0, 0.0, 0.0, 0.0]
+        if abs(self.angles[2]*radianToDegree - yawTarget) < 5:
+            ### Quad Coordinate (QC)
+            quadPosQC = GTQM(-self.angles, self.position)
+            targetPosQC = GTQM(-self.angles, positionTarget)
+            distanceVectorQC = targetPosQC - quadPosQC
+            self.x_err = distanceVectorQC[0]
+            self.y_err = distanceVectorQC[1]
 
-        self.x_err_prev = self.x_err
-        self.x_err_sum = self.x_err_sum + self.x_err
+            # print('X ERR - Y ERR', self.x_err, self.y_err)
 
+            attitudeTarget[0] = self.KP_y * self.y_err
+            + self.KI_y * self.y_err_sum
+            + self.KD_y * (self.y_err - self.y_err_prev) / self.dt
+
+            self.y_err_prev = self.y_err
+            self.y_err_sum = self.y_err_sum + self.y_err
+
+            attitudeTarget[0] = attitudeTarget[0]
+
+            attitudeTarget[1] = self.KP_x * self.x_err
+            + self.KI_x * self.x_err_sum
+            + self.KD_x * (self.x_err - self.x_err_prev) / self.dt
+       
+            self.x_err_prev = self.x_err
+            self.x_err_sum = self.x_err_sum + self.x_err
+
+            attitudeTarget[1] = attitudeTarget[1]
+
+            if attitudeTarget[0] > self.max_phi_theta_psi:
+                attitudeTarget[0] = self.max_phi_theta_psi
+            if attitudeTarget[0] < -self.max_phi_theta_psi:
+                attitudeTarget[0] = -self.max_phi_theta_psi
+            if attitudeTarget[1] > self.max_phi_theta_psi:
+                attitudeTarget[1] = self.max_phi_theta_psi
+            if attitudeTarget[1] < -self.max_phi_theta_psi:
+                attitudeTarget[1] = -self.max_phi_theta_psi
+    
+        attitudeTarget[2] = yawTarget*degreeToRadian
+        if attitudeTarget[2] - self.angles[2] > self.max_phi_theta_psi:
+            attitudeTarget[2] = self.angles[2] + self.max_phi_theta_psi
+        if attitudeTarget[2] - self.angles[2] < -self.max_phi_theta_psi:
+            attitudeTarget[2] = self.angles[2] - self.max_phi_theta_psi
+       
         attitudeTarget[3] = self.KP_z * self.z_err
         + self.KI_z * self.z_err_sum
         + self.KD_z * (self.z_err - self.z_err_prev) / self.dt
@@ -317,94 +375,96 @@ class Quadrotor(object):
         self.z_err_prev = self.z_err
         self.z_err_sum = self.z_err_sum + self.z_err
 
-        # print('Current Angles', np.array(self.angles)*radianToDegree)
-        # print('Before Attitude Target', attitudeTarget)
+        # print('Current Angles', np.round(np.array(self.angles)*radianToDegree, 2))
+        # print("ATTITUDE TARGET", np.array(attitudeTarget) * radianToDegree)
+        self.controlAttitude(np.array(attitudeTarget)*radianToDegree)
+        print()
 
-        if attitudeTarget[0] > self.max_phi_theta:
-            attitudeTarget[0] = self.max_phi_theta
-        if attitudeTarget[0] < -self.max_phi_theta:
-            attitudeTarget[0] = -self.max_phi_theta
-        if attitudeTarget[1] > self.max_phi_theta:
-            attitudeTarget[1] = self.max_phi_theta
-        if attitudeTarget[1] < -self.max_phi_theta:
-            attitudeTarget[1] = -self.max_phi_theta
+    def controlPosition(self, positionTarget):
+        
+        attitudeTarget = np.array([0.0,0.0,0.0,0.0])  # psi theta phi zdot (degree and m/s)
+        print('------------------------------')
+        print('---- INITIAL ATTITUDE TARGET QUADROTOR- ', self.index, ' ----')
 
-        # print('After Attitude Target', attitudeTarget)
-        self.controlAttitude(attitudeTarget)
+        # Yaw Control
+        distanceVector = positionTarget - self.position
+        distanceVal = math.sqrt(distanceVector[0]**2 + distanceVector[1]**2)
+      
+        yaw_target = np.arctan2([distanceVector[1]], [distanceVector[0]])[0]
+        # yaw_target = math.atan(distanceVector[1]/distanceVector[0])
+        psi_err =  yaw_target - self.angles[2]
+
+        ### Quad Coordinate (QC)
+        quadPosQC = GTQM(self.angles, self.position)
+        targetPosQC = GTQM(self.angles, positionTarget)
+        distanceVectorQC = targetPosQC - quadPosQC
+        
+        print('---- POSITION CONTROLLER QUADROTOR- ', self.index, ' ----')
+        print('yaw_target', yaw_target*radianToDegree)
+        print('psi_err', psi_err*radianToDegree)
+        print('quad pos', np.round(self.position, 2))
+        print('positionTarget, self.position', positionTarget, self.position)
+        print('distanceVector', distanceVector)
+        print('distanceVal', round(distanceVal*100)/100)
+
+        print("quadPosQC", quadPosQC)
+        print('targetPosQC', targetPosQC)
+        print('distanceVectorQC', distanceVectorQC)
+
+        self.x_err = distanceVectorQC[0]
+        self.y_err = distanceVectorQC[1]    
+
+        # print('hm', self.x_err < 0.1, self.x_err > -0.1, self.y_err < 0.1, self.y_err > -0.1)
+        # print('hm2', self.x_err < 0.1 and self.x_err > -0.1 and self.y_err < 0.1 and self.y_err > -0.1)
+
+        if (psi_err*radianToDegree > 0.01 or psi_err*radianToDegree < -0.01) and distanceVal > 0.5:
+            self.yaw_target = yaw_target
+        else:
+            attitudeTarget[0] = self.KP_y * self.y_err
+            + self.KI_y * self.y_err_sum
+            + self.KD_y * (self.y_err - self.y_err_prev) / self.dt
+
+            self.y_err_prev = self.y_err
+            self.y_err_sum = self.y_err_sum + self.y_err
+
+            attitudeTarget[1] = self.KP_x * self.x_err
+            + self.KI_x * self.x_err_sum
+            + self.KD_x * (self.x_err - self.x_err_prev) / self.dt
+       
+            # attitudeTarget[1] = attitudeTarget[1] * -1
+            self.x_err_prev = self.x_err
+            self.x_err_sum = self.x_err_sum + self.x_err
+
+        attitudeTarget[2] = self.yaw_target
+
+        self.z_err = positionTarget[2] - self.position[2]
+
+        attitudeTarget[3] = self.KP_z * self.z_err
+        + self.KI_z * self.z_err_sum
+        + self.KD_z * (self.z_err - self.z_err_prev) / self.dt
+
+        self.z_err_prev = self.z_err
+        self.z_err_sum = self.z_err_sum + self.z_err
+        
+        print('---- ATTITUDE QUADROTOR- ', self.index, ' ----')
+        print('Current Angles', np.round(np.array(self.angles)*radianToDegree, 2))
+        print('Before Attitude Target', np.round(np.array(attitudeTarget)*radianToDegree, 2))
+        if attitudeTarget[0] > self.max_phi_theta_psi:
+            attitudeTarget[0] = self.max_phi_theta_psi
+        if attitudeTarget[0] < -self.max_phi_theta_psi:
+            attitudeTarget[0] = -self.max_phi_theta_psi
+        if attitudeTarget[1] > self.max_phi_theta_psi:
+            attitudeTarget[1] = self.max_phi_theta_psi
+        if attitudeTarget[1] < -self.max_phi_theta_psi:
+            attitudeTarget[1] = -self.max_phi_theta_psi
+        if attitudeTarget[2] - self.angles[2] > self.max_phi_theta_psi:
+            attitudeTarget[2] = self.angles[2] + self.max_phi_theta_psi
+        if attitudeTarget[2] - self.angles[2] < -self.max_phi_theta_psi:
+            attitudeTarget[2] = self.angles[2] - self.max_phi_theta_psi
+        print('After Attitude Target', np.round(np.array(attitudeTarget)*radianToDegree, 2))
+        print('zdot target', attitudeTarget[3])
+        self.controlAttitude(np.array(attitudeTarget)*radianToDegree)
         return [self.KP_x * self.x_err, self.x_err, self.KI_x * self.x_err_sum, self.x_err_sum, self.KD_x * (self.x_err - self.x_err_prev) / self.dt, (self.x_err - self.x_err_prev) / self.dt, attitudeTarget[1], self.x_err]
-
-
-        # # Control y pos
-        # self.y_err = positionTarget[1] - self.position[1] # / m
-
-        # y_des_dot = (self.y_err)/self.dt # m/s
-        # self.y_dot_err = y_des_dot - self.position_dot[1] # m/s
-
-        # self.phi_pos_err = self.KP_y*self.y_err + self.KI_y * self.y_err_sum + \
-        #     self.KD_y*(y_des_dot - self.position_dot[1]) - self.angles[0]
-        # self.moments[0] = self.KP_phi * (self.phi_pos_err)
-        # + self.KI_phi*(self.phi_pos_err_sum) + \
-        #     self.KD_phi * (self.KP_y*self.y_dot_err + self.KI_y*self.y_dot_err_sum+self.KD_phi * ((y_des_dot -
-        #                                                                                            self.y_des_dot_prev)/self.dt - (self.position_dot[1] - self.y_dot_prev)/self.dt) - self.angles_dot[1])
-        # self.y_dot_prev = self.position_dot[1]
-        # self.y_des_dot_prev = y_des_dot
-
-        # self.y_err_prev = self.y_err
-        # self.y_err_sum = self.y_err_sum + self.y_err
-        # self.y_dot_err_sum = self.y_dot_err_sum + self.y_dot_err
-
-        # self.phi_pos_err_sum = self.phi_pos_err_sum + self.phi_pos_err
-
-        # # Control x pos
-        # self.x_err = positionTarget[0] - self.position[0]
-        # x_des_dot = (positionTarget[0] - self.position[0])/self.dt
-        # self.x_dot_err = x_des_dot - self.position_dot[0]
-
-        # self.theta_pos_err = self.KP_x*self.x_err + self.KI_x * self.x_err_sum + \
-        #     self.KD_x*(x_des_dot - self.position_dot[0]) - self.angles[1]
-        # self.moments[1] = self.KP_theta * (self.theta_pos_err)
-        # + self.KI_theta*(self.theta_pos_err_sum) + \
-        #     self.KD_theta * (self.KP_x*self.x_dot_err + self.KI_x*self.x_dot_err_sum+self.KD_theta * (
-        #         (x_des_dot-self.x_des_dot_prev)/self.dt - (self.position_dot[0] - self.x_dot_prev)/self.dt) - self.angles_dot[0])
-
-        # self.x_dot_prev = self.position_dot[0]
-        # self.x_des_dot_prev = x_des_dot
-
-        # self.x_err_prev = self.x_err
-        # self.x_err_sum = self.x_err_sum + self.x_err
-        # self.x_dot_err_sum = self.x_dot_err_sum + self.x_dot_err
-
-        # self.theta_pos_err_sum = self.theta_pos_err_sum + self.theta_pos_err
-
-        # # Control yaw
-        # self.moments[2] = self.KP_psi * self.psi_err + self.KI_psi*self.psi_err_sum + \
-        #     self.KD_psi * (self.psi_err - self.psi_err_prev)/self.dt
-
-        # # Control z
-        # self.z_err = positionTarget[2] - self.position[2]
-        # z_des_dot = (positionTarget[2] - self.position[2])
-        # self.z_dot_err = z_des_dot - self.position_dot[2]
-
-        # self.z_pos_err = self.KP_z*self.z_err + self.KI_z * self.z_err_sum + \
-        #     self.KD_z*(z_des_dot - self.position_dot[2]) - self.position_dot[2]
-
-        # self.thrust = self.KP_zdot * self.z_pos_err
-        # + self.KI_zdot * self.z_pos_err_sum
-        # + self.KD_zdot*(self.KP_z * self.z_dot_err + self.KI_z *self.z_dot_err_sum + self.KD_zdot *(
-        #     (z_des_dot - self.z_des_dot_prev)/self.dt - (self.position_dot[2] - self.z_dot_prev)/self.dt)- (self.position_dot[2] - self.z_dot_prev)/self.dt)
-
-        # print('z_des_dot', z_des_dot)
-        # print('z_dot_real', self.position_dot[2])
-        # print('zdot_err', self.z_dot_err)
-        # print('thrust before', self.thrust)
-
-        # self.z_dot_prev = self.position_dot[2]
-        # self.z_des_dot_prev = z_des_dot
-        # self.z_err_prev = self.z_err
-        # self.z_err_sum = self.z_err_sum + self.z_err
-        # self.z_dot_err_sum = self.z_dot_err_sum + self.z_dot_err
-
-        # self.z_pos_err_sum = self.z_pos_err_sum + self.z_dot_err
 
     def connectToSwarmController(self, SwarmController):
         self.swarmAgent = Agent(

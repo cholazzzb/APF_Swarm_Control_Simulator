@@ -19,30 +19,20 @@ class Arrow3D(FancyArrowPatch):
 
 
 class FlyHistoryReport(object):
-    # xlim, ylim, zlim = array -> [lower, upper]
-    def __init__(self, xlim, ylim, zlim):
-        fig = plt.figure(figsize=(15, 15))
-        self.ax = fig.add_subplot(111, projection='3d')
+    def __init__(self, agent, arena):
+        self.agent = agent
+        self.arena = arena
+        self.objectPositions = []
 
-        self.ax.set_xlabel('X Pos')
-        self.ax.set_ylabel('Y Pos')
-        self.ax.set_zlabel('X Pos')
-
-        self.ax.set_xlim(xlim[0], xlim[1])
-        self.ax.set_ylim(ylim[0], ylim[1])
-        self.ax.set_zlim(zlim[0], zlim[1])
-
-        plt.title('Fly History')
-
-    # xPos, yPos, zPos = array
+    # xPos, yPos, zPos = number
     # size = integer -> diameter object in (m)
     # color = string -> "red" or "g"
     def addObject(self, xPos, yPos, zPos, size, color, opacity):
-        self.ax.plot(xPos.pop(), yPos.pop(), zPos.pop(), 'o',
-                     markersize=1, color='black', alpha=1)
-        self.ax.plot(xPos, yPos, zPos, 'o', markersize=1,
+        plt.pause(0.01)
+        self.arena.plot([xPos], [yPos], [zPos], 'o', markersize=size*100,
                      color=color, alpha=opacity)
-
-    def draw(self):
         plt.draw()
-        plt.show()
+
+    def addHistory(self, xPosArray, yPosArray, zPosArray, size, color, opacity):
+        self.arena.plot(xPosArray, yPosArray, zPosArray, 'o', markersize=size*100, color=color, alpha=opacity)
+        plt.draw()

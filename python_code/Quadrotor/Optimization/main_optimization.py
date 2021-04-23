@@ -12,14 +12,14 @@ simulationTime = np.linspace(
     startTime, endTime, 1 + int((endTime-startTime)/dt))
 
 # Output
-outputSetpoint = 1  # degree (angles), meter/second (velocity)
-optimizeParameter = "y"
+outputSetpoint = 30  # degree (angles), meter/second (velocity)
+optimizeParameter = "psi"
 
 # PSO Parameter
 w = 0.72984
 c1 = 0.72984 * 2.05
 c2 = 0.72984 * 2.05
-number_of_particles = 100
+number_of_particles = 30
 number_of_parameters = 3
 min_param_value = 0
 max_param_value = 100

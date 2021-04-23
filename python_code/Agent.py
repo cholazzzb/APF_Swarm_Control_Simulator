@@ -11,7 +11,7 @@ class Agent(object):
         self.velocity = (0, 0, 0)
         self.maxVelocity = 0.3 # absolute value, need to check tello spec
         self.ObstaclePotentialForce = (0, 0, 0)
-        self.SwarmPotentialForce = []
+        self.SwarmPotentialForce = (0, 0, 0)
         self.TargetPotentialForce = (0, 0, 0)
         self.totalForce = (0, 0, 0)
         self.targetIndex = 0

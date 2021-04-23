@@ -40,7 +40,7 @@ class myPSO(object):
     def calculateQuadrotorResponse(self, k):
         specs = {"mass": 0.445, "inertia": [
             0.0027, 0.0029, 0.0053], "armLength": 0.125}
-        initialState = [[0.0, 0.0, 1.0], [0.0, 0.0, 0.0],
+        initialState = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0],
                         [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
         initialInput = [0.0, 0.0, 0.0, 0.0]
         attitudeControllerPID = [[1.43, 0, 0.13],  # PID phi
@@ -234,7 +234,8 @@ class myPSO(object):
 
         # Second loop
         iterate = 0
-        while (iterate < total_iteration):
+        isConvergent = False
+        while (not isConvergent):
             for particle_index in range(particles):
                 # Count
                 # print('BEFORE particle velocity', particle_velocity[particle_index])
@@ -274,9 +275,16 @@ class myPSO(object):
             #     particle_position[:, 0], particle_position[:, 1], particle_position[:, 2])
             # plt.draw()
 
+            # Calculate position average
+            position_average = np.round([np.mean(particle_position[:][0]), np.mean(particle_position[:][1]), np.mean(particle_position[:][2])],2)
+
             iterate = iterate+1
-            print("Iteration: ", iterate, " -> Global best fitness: ",
-                  global_fit_value, ", Parameters :",  global_best_position)
+            print('---------------------- ITERATION ', iterate, ' ----------------------')
+            print("Global best fitness: ", global_fit_value, ", Parameters :",  np.round(global_best_position, 2))
+            print('Particles Position average', position_average)
+            print('sum of average pos - global best pos', np.sum(np.abs(position_average - global_best_position)))
+            if (np.sum(np.abs(position_average - global_best_position)) < 0.5):
+                isConvergent = True
 
         print("Total iteration -> ", iterate)
         print("Best fitness -> ", global_fit_value)
