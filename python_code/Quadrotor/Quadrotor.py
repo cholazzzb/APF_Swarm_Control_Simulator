@@ -378,7 +378,7 @@ class Quadrotor(object):
         # print('Current Angles', np.round(np.array(self.angles)*radianToDegree, 2))
         # print("ATTITUDE TARGET", np.array(attitudeTarget) * radianToDegree)
         self.controlAttitude(np.array(attitudeTarget)*radianToDegree)
-        print()
+        # print()
 
     def controlPosition(self, positionTarget):
         

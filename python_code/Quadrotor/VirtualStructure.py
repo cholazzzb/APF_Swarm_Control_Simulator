@@ -66,7 +66,7 @@ class VirtualStructure(object):
         return 0.1 * self.maxSpeed
 
     def calculateFRPVel(self, APFForce):
-        print('APFForce', APFForce)
+        # print('APFForce', APFForce)
         FRPVel = [0,0,0]
         FRPVel[0] = APFForce[0]/self.mass
         FRPVel[1] = APFForce[1]/self.mass
@@ -84,24 +84,23 @@ class VirtualStructure(object):
         newFRPPosition[2] = 5
        
         newVSPositions = self.calculateVSPoint(newFRPPosition)
-        print("NEW VS POSITION ???", newVSPositions)
         VSsVelocities = [[0,0,0], [0,0,0], [0,0,0]] # For Triangle
 
         for index in range(len(VSsVelocities)):
-            print('VRP New - current', newVSPositions[index][0], self.VSPPositions[index][0])
+            # print('VRP New - current', newVSPositions[index][0], self.VSPPositions[index][0])
             VSsVelocities[index][0] = newVSPositions[index][0] - self.VSPPositions[index][0]
             VSsVelocities[index][1] = newVSPositions[index][1] - self.VSPPositions[index][1]
             VSsVelocities[index][2] = newVSPositions[index][2] - self.VSPPositions[index][2]
         moveRange = self.calculateMoveRange()
 
-        print('VsVelocities before', VSsVelocities)
+        # print('VsVelocities before', VSsVelocities)
         for VsVelocities in VSsVelocities:
             for velIndex in range(len(VsVelocities)):
                 if VsVelocities[velIndex] > moveRange:
                     velocity[velIndex] = moveRange
                 if VsVelocities[velIndex] < -moveRange:
                     velocity[velIndex] = -moveRange
-        print('VsVelocities after', velocity)
+        # print('VsVelocities after', velocity)
         
         newFRPPosition = self.FRPPosition
         newFRPPosition[0] = self.FRPPosition[0] + velocity[0]
@@ -116,11 +115,11 @@ class VirtualStructure(object):
         quadrotorInVP = 0
         for agentIndex in range(len(self.realPointPositions)):
             for agentPos in range(len(self.realPointPositions[agentIndex])):
-                print("distance real - virtual", round(abs(self.realPointPositions[agentIndex][agentPos] - self.VSPPositions[agentIndex][agentPos])*100)/100)
+                # print("distance real - virtual", round(abs(self.realPointPositions[agentIndex][agentPos] - self.VSPPositions[agentIndex][agentPos])*100)/100)
                 if abs(self.realPointPositions[agentIndex][agentPos] - self.VSPPositions[agentIndex][agentPos]) < 0.01 :
                     quadrotorInVP = quadrotorInVP + 1 
         if quadrotorInVP == 9: # Quadrotor * 3 pos
-            print("inVP")
+            # print("inVP")
             self.moveFRP(APFForce)
 
         return self.VSPPositions

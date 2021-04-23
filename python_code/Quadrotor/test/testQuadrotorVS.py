@@ -19,9 +19,16 @@ from SwarmController import SwarmController
 radianToDegree = 180/math.pi
 degreeToRadian = math.pi/180
 
-# Build Object for Swarm Controller
-TPFconfig = {"damping_factor": 1, "gain":1, "target_detecting_range":1}
-OPFconfig = {"positiveGain1": 1, "positiveGain2":1, "detecting_range": 2}
+# Build Object for Swarm Controller   
+
+# Yang diilangin
+# Global best fitness:  253.08531884571047
+# TPFconfig = {"damping_factor": 5.22, "gain":7.66, "target_detecting_range":1}
+# OPFconfig = {"positiveGain1": 0.01, "positiveGain2":2.21, "detecting_range": 2}
+
+TPFconfig = {"damping_factor": 5.22, "gain":7.66, "target_detecting_range":1}
+OPFconfig = {"positiveGain1": 0.01, "positiveGain2":2.21, "detecting_range": 2}
+
 SPFconfig = {"min_allowable_dist": 10}
 SwarmController1 = SwarmController(TPFconfig, OPFconfig, SPFconfig)
 
@@ -56,43 +63,27 @@ AR2 = Quadrotor(1, "AR2", specs, initialState2,
 AR3 = Quadrotor(2, "AR3", specs, initialState3,
                    initialInput, attitudeControllerPID, positionControllerPID)
 
-Target1 = Ship([10, 10, 0], 5)
+Target1 = Ship([10, 10, 5], 5)
 Target1.connectToSwarmController(SwarmController1)
 
-Obstacle1 = Bird([5, 6, 5])
-Obstacle1.connectToSwarmController(SwarmController1)
-
-Obstacle2 = Bird([5, 5, 5])
-Obstacle2.connectToSwarmController(SwarmController1)
-
-Obstacle3 = Bird([5, 4, 5])
-Obstacle3.connectToSwarmController(SwarmController1)
-
-Obstacle4 = Bird([5, 9, 5])
-Obstacle4.connectToSwarmController(SwarmController1)
-
-Obstacle5 = Bird([4, 2, 5])
-Obstacle5.connectToSwarmController(SwarmController1)
-
-Obstacle6 = Bird([7, 9, 5])
-Obstacle6.connectToSwarmController(SwarmController1)
-
-Obstacle7 = Bird([8, 9, 5])
-Obstacle7.connectToSwarmController(SwarmController1)
-
-Obstacle8 = Bird([0, 2, 5])
-Obstacle8.connectToSwarmController(SwarmController1)
+ObstaclesPosition = [
+            [5,6,5], [5,5,5], [5,4,5], [5,9,5],
+            [4,2,5], [7,9,5], [8,9,5], [0,2,5]]
+        
+for obstaclePosition in ObstaclesPosition:
+    ObstacleObject = Bird(obstaclePosition)
+    ObstacleObject.connectToSwarmController(SwarmController1)
 
 # For Plotting System Response
 Report1 = Report(AR1)
 Report2 = Report(AR2)
 Report3 = Report(AR3)
 
-# PSI_ERR_GRAPH = DynamicGraph(0.01)
 # APF_GRAPH = DynamicGraph(0.01)
 # APF_GRAPH.createPlot(0, 'X', 0, 'g-')
 # APF_GRAPH.createPlot(1, 'Y', 0, 'r-')
 # APF_GRAPH.createPlot(2, 'Z', 0, 'b-')
+# PSI_ERR_GRAPH = DynamicGraph(0.01)
 # PSI_ERR_GRAPH.createPlot(0, 'PSI ERR AR1', 1, 'g-')
 # PSI_ERR_GRAPH.createPlot(1, 'PSI ERR AR2', 2, 'r-')
 # PSI_ERR_GRAPH.createPlot(2, 'PSI ERR AR3', 3, 'b-')
@@ -121,37 +112,36 @@ FlyHistoryReport1.addObject(5, 6, 5, 0.05, 'r', 1)
 FlyHistoryReport1.addObject(5, 5, 5, 0.05, 'r', 1)
 FlyHistoryReport1.addObject(5, 4, 5, 0.05, 'r', 1)
 FlyHistoryReport1.addObject(5, 9, 5, 0.05, 'r', 1)
+FlyHistoryReport1.addObject(5, 8, 5, 0.05, 'r', 1)
 FlyHistoryReport1.addObject(4, 2, 5, 0.05, 'r', 1)
 FlyHistoryReport1.addObject(7, 9, 5, 0.05, 'r', 1)
 FlyHistoryReport1.addObject(8, 9, 5, 0.05, 'r', 1)
-FlyHistoryReport1.addObject(0, 2, 5, 0.05, 'r', 1)
 
 # History Data
-AR1PositionHistory = np.array([[AR1.position[0], AR1.position[1], AR1.position[2]]])
-AR2PositionHistory = np.array([[AR2.position[0], AR2.position[1], AR2.position[2]]])
-AR3PositionHistory = np.array([[AR3.position[0], AR3.position[1], AR3.position[2]]])
+# AR1PositionHistory = np.array([[AR1.position[0], AR1.position[1], AR1.position[2]]])
+# AR2PositionHistory = np.array([[AR2.position[0], AR2.position[1], AR2.position[2]]])
+# AR3PositionHistory = np.array([[AR3.position[0], AR3.position[1], AR3.position[2]]])
 
 VSPositionHistory = np.array([VS.FRPPosition])
 
 # quadrotorView.show()
 
-for i in range(8000):
-    # Virtual Structure calculate, freq 1/10 
-    if i%5 == 0:
-        currentRealPointPos = [AR1.position, AR2.position, AR3.position]
-        VS.setRealPointPositions(currentRealPointPos)
+for i in range(2000):
+    # SIMPLE
+    try :
         SwarmController1.calculateAgentsForces()
         APFForce = SwarmController1.agents[0].calculate_total_force()
-        newTargetPos = VS.calculateNewVSPoint(APFForce)
-        yawTarget1 = np.arctan2(newTargetPos[0][1], newTargetPos[0][0])
-        yawTarget2 = np.arctan2(newTargetPos[1][1], newTargetPos[1][0])
-        yawTarget3 = np.arctan2(newTargetPos[2][1], newTargetPos[2][0])
+        VS.moveFRP(APFForce)
+
+        newTargetPos = VS.VSPPositions 
+        VSPositionHistory = np.concatenate(
+            (VSPositionHistory, np.array([
+                VS.FRPPosition
+            ]))
+        )
 
         print('------------------------------')
         print('---- VS - REAL WORLD POSITION')
-        print('real world pos 1', currentRealPointPos[0])
-        print('real world pos 2', currentRealPointPos[1])
-        print('real world pos 3', currentRealPointPos[2])
         print("APF Force", APFForce)
         print("VS RP", VS.FRPPosition)
         print('NEW TARGET POS 1', newTargetPos[0])
@@ -159,64 +149,88 @@ for i in range(8000):
         print('NEW TARGET POS 3', newTargetPos[2])
         print('')
         print('------------------------------')
+    
+    except:
+        print("NABRAKK")
+       
+    # Virtual Structure calculate, freq 1/10 
+#     if i%5 == 0:
+#         currentRealPointPos = [AR1.position, AR2.position, AR3.position]
+#         VS.setRealPointPositions(currentRealPointPos)
+#         SwarmController1.calculateAgentsForces()
+#         APFForce = SwarmController1.agents[0].calculate_total_force()
+#         VS.moveFRP(APFForce)
+#         newTargetPos = VS.VSPPositions 
+#         yawTarget1 = np.arctan2(newTargetPos[0][1], newTargetPos[0][0])
+#         yawTarget2 = np.arctan2(newTargetPos[1][1], newTargetPos[1][0])
+#         yawTarget3 = np.arctan2(newTargetPos[2][1], newTargetPos[2][0])
 
-    AR1.controlPositionYaw((newTargetPos[0][0], newTargetPos[0][1], newTargetPos[0][2]), yawTarget1)
-    AR2.controlPositionYaw((newTargetPos[1][0], newTargetPos[1][1], newTargetPos[1][2]), yawTarget2)
-    AR3.controlPositionYaw((newTargetPos[2][0], newTargetPos[2][1], newTargetPos[2][2]), yawTarget3)
+#         print('------------------------------')
+#         print('---- VS - REAL WORLD POSITION')
+#         print('real world pos 1', currentRealPointPos[0])
+#         print('real world pos 2', currentRealPointPos[1])
+#         print('real world pos 3', currentRealPointPos[2])
+#         print("APF Force", APFForce)
+#         print("VS RP", VS.FRPPosition)
+#         print('NEW TARGET POS 1', newTargetPos[0])
+#         print('NEW TARGET POS 2', newTargetPos[1])
+#         print('NEW TARGET POS 3', newTargetPos[2])
+#         print('')
+#         print('------------------------------')
 
-    # PSI_ERR_GRAPH.updatePlotData(0, AR1.psi_err*radianToDegree)
-    # PSI_ERR_GRAPH.updatePlotData(1, AR2.psi_err*radianToDegree)
-    # PSI_ERR_GRAPH.updatePlotData(2, AR3.psi_err*radianToDegree)
-    # PSI_ERR_GRAPH.updatePlot()
-    # APF_GRAPH.updatePlotData(0, APFForce[0])
-    # APF_GRAPH.updatePlotData(1, APFForce[1])
-    # APF_GRAPH.updatePlotData(2, APFForce[2])
-    # APF_GRAPH.updatePlot()
+#     AR1.controlPositionYaw((newTargetPos[0][0], newTargetPos[0][1], newTargetPos[0][2]), yawTarget1)
+#     AR2.controlPositionYaw((newTargetPos[1][0], newTargetPos[1][1], newTargetPos[1][2]), yawTarget2)
+#     AR3.controlPositionYaw((newTargetPos[2][0], newTargetPos[2][1], newTargetPos[2][2]), yawTarget3)
 
-    AR1.updateState()
-    AR2.updateState()
-    AR3.updateState()
+#     # PSI_ERR_GRAPH.updatePlotData(0, AR1.psi_err*radianToDegree)
+#     # PSI_ERR_GRAPH.updatePlotData(1, AR2.psi_err*radianToDegree)
+#     # PSI_ERR_GRAPH.updatePlotData(2, AR3.psi_err*radianToDegree)
+#     # PSI_ERR_GRAPH.updatePlot()
+#     APF_GRAPH.updatePlotData(0, APFForce[0])
+#     APF_GRAPH.updatePlotData(1, APFForce[1])
+#     APF_GRAPH.updatePlotData(2, APFForce[2])
+#     APF_GRAPH.updatePlot()
 
-    # Plot Data
-    Report1.updateReport(AR1.getState(), AR1.thrust, AR1.moments)
-    Report2.updateReport(AR2.getState(), AR2.thrust, AR2.moments)
-    Report3.updateReport(AR3.getState(), AR3.thrust, AR3.moments)
+#     AR1.updateState()
+#     AR2.updateState()
+#     AR3.updateState()
 
-    if i%5 == 0:
-        AR1PositionHistory = np.concatenate(
-            (AR1PositionHistory, np.array([[
-                AR1.position[0],
-                AR1.position[1],
-                AR1.position[2],
-            ]]))
-            )
-        AR2PositionHistory = np.concatenate(
-            (AR2PositionHistory, np.array([[
-                AR2.position[0],
-                AR2.position[1],
-                AR2.position[2],
-            ]]))
-            )
-        AR3PositionHistory = np.concatenate(
-            (AR3PositionHistory, np.array([[
-                AR3.position[0],
-                AR3.position[1],
-                AR3.position[2],
-            ]]))
-            )
-        VSPositionHistory = np.concatenate(
-            (VSPositionHistory, np.array([
-                VS.FRPPosition
-            ]))
-        )
+#     # Plot Data
+#     Report1.updateReport(AR1.getState(), AR1.thrust, AR1.moments)
+#     Report2.updateReport(AR2.getState(), AR2.thrust, AR2.moments)
+#     Report3.updateReport(AR3.getState(), AR3.thrust, AR3.moments)
 
-    # AR1History.addObject(AR1.position[0], AR1.position[1], AR1.position[2], 0.0125, 'b', 1)
-    # AR2History.addObject(AR2.position[0], AR2.position[1], AR2.position[2], 0.0125, 'b', 1)
-    # AR3History.addObject(AR3.position[0], AR3.position[1], AR3.position[2], 0.0125, 'b', 1)
+#     if i%5 == 0:
+#         AR1PositionHistory = np.concatenate(
+#             (AR1PositionHistory, np.array([[
+#                 AR1.position[0],
+#                 AR1.position[1],
+#                 AR1.position[2],
+#             ]]))
+#             )
+#         AR2PositionHistory = np.concatenate(
+#             (AR2PositionHistory, np.array([[
+#                 AR2.position[0],
+#                 AR2.position[1],
+#                 AR2.position[2],
+#             ]]))
+#             )
+#         AR3PositionHistory = np.concatenate(
+#             (AR3PositionHistory, np.array([[
+#                 AR3.position[0],
+#                 AR3.position[1],
+#                 AR3.position[2],
+#             ]]))
+#             )
+#         VSPositionHistory = np.concatenate(
+#             (VSPositionHistory, np.array([
+#                 VS.FRPPosition
+#             ]))
+#         )
 
-FlyHistoryReport1.addHistory(AR1PositionHistory[:,0], AR1PositionHistory[:,1], AR1PositionHistory[:,2], 0.01, 'b', 1)
-FlyHistoryReport1.addHistory(AR2PositionHistory[:,0], AR2PositionHistory[:,1], AR2PositionHistory[:,2], 0.01, 'c', 1)
-FlyHistoryReport1.addHistory(AR3PositionHistory[:,0], AR3PositionHistory[:,1], AR3PositionHistory[:,2], 0.01, 'k', 1)
+# FlyHistoryReport1.addHistory(AR1PositionHistory[:,0], AR1PositionHistory[:,1], AR1PositionHistory[:,2], 0.01, 'b', 1)
+# FlyHistoryReport1.addHistory(AR2PositionHistory[:,0], AR2PositionHistory[:,1], AR2PositionHistory[:,2], 0.01, 'c', 1)
+# FlyHistoryReport1.addHistory(AR3PositionHistory[:,0], AR3PositionHistory[:,1], AR3PositionHistory[:,2], 0.01, 'k', 1)
 FlyHistoryReport1.addHistory(VSPositionHistory[:,0], VSPositionHistory[:,1], VSPositionHistory[:,2], 0.01, 'y', 1)
 
 Report1.generateReport()

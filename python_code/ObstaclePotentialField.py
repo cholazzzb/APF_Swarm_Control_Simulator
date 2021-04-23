@@ -48,14 +48,14 @@ class ObstaclePotentialField(object):
         for Obstacle in Obstacles:
             distance_tuple = minusWithTuple(Agent.position, Obstacle.position)
             distance = math.sqrt(
-                abs(sum(tuple(pow(x, 2) for x in distance_tuple))))
+                abs(sum(tuple(pow(x, 2) for x in distance_tuple)))) -1
             if distance <= self.detecting_range:
                 agent_obstacles_force = plusWithTuple(agent_obstacles_force, timesWithInteger(distance_tuple, (
                     (1/distance - 1/self.detecting_range) *
                     self.positiveGain1/distance/distance
                     -
                     self.positiveGain2*(distance-self.detecting_range)
-                )/distance))
+                )/(distance + 1)))
             else:
                 agent_obstacles_force = plusWithTuple(
                     agent_obstacles_force, (0, 0, 0))
