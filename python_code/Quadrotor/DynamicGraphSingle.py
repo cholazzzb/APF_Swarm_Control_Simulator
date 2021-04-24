@@ -2,9 +2,8 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import numpy as np
 
-class DynamicGraph(object):
+class DynamicGraphSingle(object):
     def __init__(self, dt):
-        plotSize = 3 # plotSize always 3 WKWKW
         plt.ion()
         self.figure = plt.figure()
         self.xAxis = [0]
@@ -14,10 +13,10 @@ class DynamicGraph(object):
         self.biggestYValue = []
         self.axs = []
         self.plots = []
-        for index in range(plotSize):
-            size = plotSize*100 + 200 + 10 + (index+1)*2 - 1 
-            newAx = self.figure.add_subplot(size)
-            self.axs.append(newAx)
+
+        size = 111
+        newAx = self.figure.add_subplot(size)
+        self.axs.append(newAx)
 
     def createPlot(self, index, title, initialYData, style):
         self.yAxis.append([initialYData])

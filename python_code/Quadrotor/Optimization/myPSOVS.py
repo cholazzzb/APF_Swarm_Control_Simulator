@@ -57,8 +57,7 @@ class myPSOVS(object):
 
         ObstaclesPosition = [
             [5,6,5], [5,5,5], [5,4,5], [5,9,5],
-            [4,2,5], [7,9,5], [8,9,5], [0,2,5]
-            ]
+            [4,2,5], [7,9,5], [8,9,5], [0,2,5]]
         
         for obstaclePosition in ObstaclesPosition:
             ObstacleObject = Bird(obstaclePosition)
@@ -149,9 +148,8 @@ class myPSOVS(object):
         Target1.connectToSwarmController(SwarmController1)
 
         ObstaclesPosition = [
-            [5,6,5], [5,5,5], [5,4,5], [5,9,5], [5,8,5],
-            [4,2,5], [7,9,5], [8,9,5]
-            ]
+            [5,6,5], [5,5,5], [5,4,5], [5,9,5], 
+            [4,2,5], [7,9,5], [8,9,5], [2,0,5]]
         
         for obstaclePosition in ObstaclesPosition:
             ObstacleObject = Bird(obstaclePosition)

@@ -33,6 +33,16 @@ class FlyHistoryReport(object):
                      color=color, alpha=opacity)
         plt.draw()
 
+    def addObject2D(self, xPos, yPos, size, color, opacity, label):
+        plt.pause(0.01)
+        self.arena.plot([xPos], [yPos], 'o', markersize=size*100,
+                     color=color, alpha=opacity, label=label)
+        plt.draw()
+
     def addHistory(self, xPosArray, yPosArray, zPosArray, size, color, opacity):
         self.arena.plot(xPosArray, yPosArray, zPosArray, 'o', markersize=size*100, color=color, alpha=opacity)
+        plt.draw()
+
+    def addHistory2D(self, xPosArray, yPosArray, size, color, opacity, label):
+        self.arena.plot(xPosArray, yPosArray, 'o', markersize=size*100, color=color, alpha=opacity, label=label)
         plt.draw()
