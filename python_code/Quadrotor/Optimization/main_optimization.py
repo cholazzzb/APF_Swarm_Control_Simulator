@@ -2,20 +2,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 from myPSO import myPSO
 
-# Setup
-# Time
-dt = 0.01
+## Setup
+## Time
+dt = 1/15
 startTime = 0
 endTime = 5
 
 simulationTime = np.linspace(
     startTime, endTime, 1 + int((endTime-startTime)/dt))
 
-# Output
-outputSetpoint = 30  # degree (angles), meter/second (velocity)
-optimizeParameter = "psi"
+## Output
+outputSetpoint = 1  # degree (angles), meter/second (velocity)
+optimizeParameter = "x"
 
-# PSO Parameter
+## PSO Parameter
 w = 0.72984
 c1 = 0.72984 * 2.05
 c2 = 0.72984 * 2.05

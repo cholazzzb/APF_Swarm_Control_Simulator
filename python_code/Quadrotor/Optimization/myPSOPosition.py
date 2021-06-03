@@ -39,7 +39,7 @@ class myPSOPosition(object):
     #       KPpsi, KIpsi, KDpsi]
 
     def calculateQuadrotorResponse(self, k):
-        print('k', k)
+        # print('k', k)
         specs = {"mass": 0.445, "inertia": [
             0.0027, 0.0029, 0.0053], "armLength": 0.125}
         initialState = [[0.0, 0.0, 1.0], [0.0, 0.0, 0.0],

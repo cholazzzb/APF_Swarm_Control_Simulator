@@ -40,7 +40,7 @@ class Quadrotor(object):
         self.index = index
         self.name = name
         self.t = 0  # s
-        self.dt = 0.01  # s
+        self.dt = 1/15  # s
 
         self.mass = specs["mass"]  # kg
         self.inertia = specs["inertia"]  # [Ixx, Iyy, Izz] # kg m^2
@@ -151,7 +151,9 @@ class Quadrotor(object):
         self.targetPosition = []
 
         # AR max angles
-        self.max_phi_theta_psi = 30*degreeToRadian #degree
+        # self.max_phi_theta_psi = 30*degreeToRadian #degree
+        # For TA
+        self.max_phi_theta_psi = 9*degreeToRadian 
 
         # Yaw Control
         self.yaw_target = 0
@@ -383,8 +385,8 @@ class Quadrotor(object):
     def controlPosition(self, positionTarget):
         
         attitudeTarget = np.array([0.0,0.0,0.0,0.0])  # psi theta phi zdot (degree and m/s)
-        print('------------------------------')
-        print('---- INITIAL ATTITUDE TARGET QUADROTOR- ', self.index, ' ----')
+        # print('------------------------------')
+        # print('---- INITIAL ATTITUDE TARGET QUADROTOR- ', self.index, ' ----')
 
         # Yaw Control
         distanceVector = positionTarget - self.position
@@ -399,17 +401,17 @@ class Quadrotor(object):
         targetPosQC = GTQM(self.angles, positionTarget)
         distanceVectorQC = targetPosQC - quadPosQC
         
-        print('---- POSITION CONTROLLER QUADROTOR- ', self.index, ' ----')
-        print('yaw_target', yaw_target*radianToDegree)
-        print('psi_err', psi_err*radianToDegree)
-        print('quad pos', np.round(self.position, 2))
-        print('positionTarget, self.position', positionTarget, self.position)
-        print('distanceVector', distanceVector)
-        print('distanceVal', round(distanceVal*100)/100)
+        # print('---- POSITION CONTROLLER QUADROTOR- ', self.index, ' ----')
+        # print('yaw_target', yaw_target*radianToDegree)
+        # print('psi_err', psi_err*radianToDegree)
+        # print('quad pos', np.round(self.position, 2))
+        # print('positionTarget, self.position', positionTarget, self.position)
+        # print('distanceVector', distanceVector)
+        # print('distanceVal', round(distanceVal*100)/100)
 
-        print("quadPosQC", quadPosQC)
-        print('targetPosQC', targetPosQC)
-        print('distanceVectorQC', distanceVectorQC)
+        # print("quadPosQC", quadPosQC)
+        # print('targetPosQC', targetPosQC)
+        # print('distanceVectorQC', distanceVectorQC)
 
         self.x_err = distanceVectorQC[0]
         self.y_err = distanceVectorQC[1]    
@@ -446,9 +448,9 @@ class Quadrotor(object):
         self.z_err_prev = self.z_err
         self.z_err_sum = self.z_err_sum + self.z_err
         
-        print('---- ATTITUDE QUADROTOR- ', self.index, ' ----')
-        print('Current Angles', np.round(np.array(self.angles)*radianToDegree, 2))
-        print('Before Attitude Target', np.round(np.array(attitudeTarget)*radianToDegree, 2))
+        # print('---- ATTITUDE QUADROTOR- ', self.index, ' ----')
+        # print('Current Angles', np.round(np.array(self.angles)*radianToDegree, 2))
+        # print('Before Attitude Target', np.round(np.array(attitudeTarget)*radianToDegree, 2))
         if attitudeTarget[0] > self.max_phi_theta_psi:
             attitudeTarget[0] = self.max_phi_theta_psi
         if attitudeTarget[0] < -self.max_phi_theta_psi:
@@ -461,8 +463,8 @@ class Quadrotor(object):
             attitudeTarget[2] = self.angles[2] + self.max_phi_theta_psi
         if attitudeTarget[2] - self.angles[2] < -self.max_phi_theta_psi:
             attitudeTarget[2] = self.angles[2] - self.max_phi_theta_psi
-        print('After Attitude Target', np.round(np.array(attitudeTarget)*radianToDegree, 2))
-        print('zdot target', attitudeTarget[3])
+        # print('After Attitude Target', np.round(np.array(attitudeTarget)*radianToDegree, 2))
+        # print('zdot target', attitudeTarget[3])
         self.controlAttitude(np.array(attitudeTarget)*radianToDegree)
         return [self.KP_x * self.x_err, self.x_err, self.KI_x * self.x_err_sum, self.x_err_sum, self.KD_x * (self.x_err - self.x_err_prev) / self.dt, (self.x_err - self.x_err_prev) / self.dt, attitudeTarget[1], self.x_err]
 

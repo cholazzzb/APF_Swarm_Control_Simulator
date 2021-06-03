@@ -90,8 +90,8 @@ Report3 = Report(AR3)
 # PSI_ERR_GRAPH.createPlot(1, 'PSI ERR AR2', 2, 'r-')
 # PSI_ERR_GRAPH.createPlot(2, 'PSI ERR AR3', 3, 'b-')
 
-# def calculateDistance(pos1, pos2):
-#     return math.sqrt((pos1[0] - pos2[0])**2 + (pos1[1] - pos2[1])**2)
+def calculateDistance(pos1, pos2):
+    return math.sqrt((pos1[0] - pos2[0])**2 + (pos1[1] - pos2[1])**2)
 # DISTANCE_GRAPH1 = DynamicGraphSingle(0.01)
 # DISTANCE_GRAPH1.createPlot(0, "Distance between quadrotor 1 and 2", calculateDistance(AR1.position, AR2.position), 'g-')
 # DISTANCE_GRAPH2 = DynamicGraphSingle(0.01)
@@ -135,6 +135,10 @@ AR2PositionHistory = np.array([[AR2.position[0], AR2.position[1], AR2.position[2
 AR3PositionHistory = np.array([[AR3.position[0], AR3.position[1], AR3.position[2]]])
 
 VSPositionHistory = np.array([VS.FRPPosition])
+
+dis12History = np.array([calculateDistance(AR1.position, AR2.position)])
+dis23History = np.array([calculateDistance(AR2.position, AR3.position)])
+dis13History = np.array([calculateDistance(AR1.position, AR3.position)])
 
 # quadrotorView.show()
 
@@ -248,6 +252,22 @@ for i in range(10000):
             ]))
         )
 
+        dis12History = np.concatenate(
+            (dis12History, np.array([
+                calculateDistance(AR1.position, AR2.position)
+            ]))
+        )
+        dis23History = np.concatenate(
+            (dis23History, np.array([
+                calculateDistance(AR2.position, AR3.position)
+            ]))
+        )
+        dis13History = np.concatenate(
+            (dis13History, np.array([
+                calculateDistance(AR1.position, AR3.position)
+            ]))
+        )
+
 # FlyHistoryReport1.addHistory2D(AR1PositionHistory[:,0], AR1PositionHistory[:,1], 0.01, 'b', 1, 'quadrotor1')
 # FlyHistoryReport1.addHistory2D(AR2PositionHistory[:,0], AR2PositionHistory[:,1], 0.01, 'c', 1, 'quadrotor2')
 # FlyHistoryReport1.addHistory2D(AR3PositionHistory[:,0], AR3PositionHistory[:,1], 0.01, 'k', 1, 'quadrotor3')
@@ -260,13 +280,25 @@ for i in range(10000):
 # FlyHistoryReport1.addHistory(VSPositionHistory[:,0], VSPositionHistory[:,1], VSPositionHistory[:,2], 0.01, 'y', 1)
 
 timeXAxis = np.linspace(0,100, 2001)
+DISTANCE_SINGLE_GRAPH = plt.figure()
+AXIS_DISTANCE_SINGLE_GRAPH = DISTANCE_SINGLE_GRAPH.add_subplot(111)
+AXIS_DISTANCE_SINGLE_GRAPH.plot(timeXAxis, dis12History, label="quadrotor 1 and 2")
+AXIS_DISTANCE_SINGLE_GRAPH.plot(timeXAxis, dis23History, label="quadrotor 2 and 3")
+AXIS_DISTANCE_SINGLE_GRAPH.plot(timeXAxis, dis13History, label="quadrotor 2 and 3")
+AXIS_DISTANCE_SINGLE_GRAPH.legend(loc="lower right")
+AXIS_DISTANCE_SINGLE_GRAPH.set_title("Distance between quadrotor (m)")
+AXIS_DISTANCE_SINGLE_GRAPH.set_xlabel('time (s)')
+AXIS_DISTANCE_SINGLE_GRAPH.set_ylabel('distance (m)')
+
 ALTITUDE_GRAPH = plt.figure()
 AXIS_ALTITUDE_GRAPH = ALTITUDE_GRAPH.add_subplot(111)
 AXIS_ALTITUDE_GRAPH.plot(timeXAxis, AR1PositionHistory[:,2], label="Quadrotor 1 Altitude", color='r')
 AXIS_ALTITUDE_GRAPH.plot(timeXAxis, AR2PositionHistory[:,2], label="Quadrotor 2 Altitude", color='g')
 AXIS_ALTITUDE_GRAPH.plot(timeXAxis, AR3PositionHistory[:,2], label="Quadrotor 3 Altitude", color='b')
 AXIS_ALTITUDE_GRAPH.legend(loc="upper right")
-AXIS_ALTITUDE_GRAPH.set_title('Altitude (m)')
+AXIS_ALTITUDE_GRAPH.set_title('Altitude of Quadrotors')
+AXIS_ALTITUDE_GRAPH.set_xlabel('time (s)')
+AXIS_ALTITUDE_GRAPH.set_ylabel('altitude (m)')
 
 # Report1.generateReport()
 # Report2.generateReport()

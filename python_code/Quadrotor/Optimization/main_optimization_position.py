@@ -24,7 +24,7 @@ number_of_particles = 100
 number_of_parameters = 15
 min_param_value = 0
 max_param_value = 1
-total_iteration = 20
+total_iteration = 1000
 is_minimize = True
 cost_function = "integralAbsoluteError"
 

@@ -17,8 +17,8 @@ from tupleUtil import calculateLength
 radianToDegree = 180/math.pi
 degreeToRadian = math.pi/180
 
-class myPSO(object):
-    def __init__(self, simulationTime, targetOutput, min, max, responseType):
+class myPSOModelling(object):
+    def __init__(self, simulationTime, targetOutput, min, max, responseType, realOutput):
         self.simulationTime = simulationTime
         if(responseType == "theta" or responseType == "phi" or responseType == "psi"):
             self.targetOutput = targetOutput*degreeToRadian
@@ -26,6 +26,7 @@ class myPSO(object):
         self.min = min
         self.max = max
         self.responseType = responseType
+        self.realOutput = realOutput
         
         # For Cost Function
         self.swarmForces = []
@@ -41,20 +42,12 @@ class myPSO(object):
         specs = {"mass": 0.445, "inertia": [
             0.0027, 0.0029, 0.0053], "armLength": 0.125}
         initialState = [[0.0, 0.0, 1.0], [0.0, 0.0, 0.0],
-                        [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+                        [0.0, 0.0, 38.0*degreeToRadian], [0.0, 0.0, 0.0]]
         initialInput = [0.0, 0.0, 0.0, 0.0]
-
-        # STABLE IN PAPER
-        # attitudeControllerPID = [[1.43, 0, 0.13],  # PID phi
-        #                          [1.52, 0, 0.14],  # PID theta
-        #                          [2.43, 0, 0.26],  # PID psi
-        #                          [48.49, 14.29, 0]]  # PID z dot
-
-        # FOR TA
-        attitudeControllerPID = [[0.01, -0.001, 0.007],  # PID phi
-                                 [0.022, -0.003, 0.002],  # PID theta
-                                 [0.001, 0.002, 0.002],  # PID psi
-                                 [7.86, 3.87, -0.07]]  # PID z dot
+        attitudeControllerPID = [[1.43, 0, 0.13],  # PID phi
+                                 [1.52, 0, 0.14],  # PID theta
+                                 [2.43, 0, 0.26],  # PID psi
+                                 [48.49, 14.29, 0]]  # PID z dot
 
         positionControllerPID = [[0, 0, 0],  # PID x
                                 [0, 0, 0],    # PID y
@@ -114,6 +107,8 @@ class myPSO(object):
                 return responseValue, False
 
             responseValue.append(response.get(self.responseType, "nothing"))
+        
+        # print('response val', responseValue)
         return responseValue, True
     
     def calculateSwarmDrones(self, newParameters):    
@@ -167,8 +162,8 @@ class myPSO(object):
 
     def calculateIntegralAbsoluteError(self, outputValues):
         error = []
-        for outputValue in outputValues:
-            error = np.append(error, [self.targetOutput-outputValue])
+        for index in range(len(outputValues)):
+            error = np.append(error, [self.realOutput[index]-outputValues[index]])
         return np.sum(abs(error))
 
     # Spesific for APF with J = 1 * abs(Force) + 1 * abs(target distance(between quadrotors) - distance(between quadrotors))
@@ -259,18 +254,18 @@ class myPSO(object):
                 # print('AFTER particle velocity', particle_velocity[particle_index])
 
                 particle_position[particle_index] = np.round(particle_velocity[particle_index] + \
-                    particle_position[particle_index], 2)
+                    particle_position[particle_index], 3)
 
                 # For Swarm
                 # [systemResponse, isStable] = self.calculateSwarmDrones(particle_position[particle_index])
                 # For Attitude and Position Controller
                 [systemResponse, isStable] = self.calculateQuadrotorResponse(
                     particle_position[particle_index])
+
                 if isStable:
                     cost_value = cost_function(systemResponse)
                 else:
                     cost_value = 1e100
-                # print('system response', systemResponse)
 
                 # Update
                 if(particle_fit_value[particle_index] > cost_value):
@@ -294,7 +289,7 @@ class myPSO(object):
 
             iterate = iterate+1
             print('---------------------- ITERATION ', iterate, ' ----------------------')
-            print("Global best fitness: ", global_fit_value, ", Parameters :",  np.round(global_best_position, 2))
+            print("Global best fitness: ", global_fit_value, ", Parameters :",  np.round(global_best_position, 3))
             print('Particles Position average', position_average)
             print('sum of average pos - global best pos', np.sum(np.abs(position_average - global_best_position)))
             if (np.sum(np.abs(position_average - global_best_position)) < 0.5):
@@ -309,19 +304,18 @@ class myPSO(object):
         plt.close()
     
         plt.xlabel("Time (s)")
-        plt.ylabel("Position "+ self.responseType+" (m)")
+        plt.ylabel(self.responseType+ " (degree)")
 
         # For APF Swarm 
         # plt.title("Distance between Drones")
         # [bestResponse, isStable] = self.calculateSwarmDrones(self.bestParameter)
 
         # For Attitude and Position Controller
-        plt.title("Response")
+        plt.title("Attitude Controller")
         [bestResponse, isStable] = self.calculateQuadrotorResponse(
             self.bestParameter)
-        plt.plot(self.simulationTime, bestResponse, label="Best Response")
-        plt.plot(self.simulationTime, self.targetOutput *
-                 np.ones(self.simulationTime.shape), label="Set Point", color="red")
+        plt.plot(self.simulationTime, bestResponse, label="Model")
+        plt.plot(self.simulationTime, self.realOutput, label="Real", color="red")
         plt.legend(loc='upper left')
         plt.show()
         plt.pause(100)

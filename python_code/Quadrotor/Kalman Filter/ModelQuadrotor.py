@@ -1,5 +1,4 @@
 import numpy as np
-from numba import njit
 
 g = 9.81
 mass = 0.445

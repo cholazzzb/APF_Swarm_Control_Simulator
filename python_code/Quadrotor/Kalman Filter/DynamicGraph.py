@@ -31,13 +31,14 @@ class DynamicGraph(object):
         self.yAxis[index].append(newYData)
         self.plots[index].set_xdata(self.xAxis)
         self.plots[index].set_ydata(self.yAxis[index])
-        self.axs[index].set_xlim(0, self.xAxis[-1]+self.dt)
-        if newYData > self.biggestYValue[index]:    
-            self.biggestYValue[index] = newYData    
-            self.axs[index].set_ylim(self.smallestYValue[index], self.biggestYValue[index])
-        if newYData < self.smallestYValue[index]:
-            self.smallestYValue[index] = newYData
-            self.axs[index].set_ylim(self.smallestYValue[index], self.biggestYValue[index])
+
+        self.axs[index].set_ylim(0, 1.2)
+        # if newYData > self.biggestYValue[index]:    
+        #     self.biggestYValue[index] = newYData    
+        #     self.axs[index].set_ylim(self.smallestYValue[index], self.biggestYValue[index])
+        # if newYData < self.smallestYValue[index]:
+        #     self.smallestYValue[index] = newYData
+        #     self.axs[index].set_ylim(self.smallestYValue[index], self.biggestYValue[index])
 
         self.axs[index].set_xlim(0, self.xAxis[-1]+self.dt)
 

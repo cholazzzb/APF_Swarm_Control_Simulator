@@ -201,7 +201,7 @@ class QuadrotorARSim(object):
             if moment < self.moment_min:
                 moment = self.moment_min
 
-        print("moment", self.moments)
+        # print("moment", self.moments)
 
         # Translational Motion
         self.state_dot[0] = self.position_dot
