@@ -6,6 +6,7 @@ import math
 import sys
 sys.path.append('../')
 from Quadrotor import Quadrotor
+from QuadrotorPEM import QuadrotorPEM
 
 sys.path.append('../')
 from Agent import Agent
@@ -54,11 +55,11 @@ class myPSO(object):
         attitudeControllerPID = [[0.01, -0.001, 0.007],  # PID phi
                                  [0.022, -0.003, 0.002],  # PID theta
                                  [0.001, 0.002, 0.002],  # PID psi
-                                 [7.86, 3.87, -0.07]]  # PID z dot
+                                 [5.01, 4.01, 0. ]]  # PID z dot
 
         positionControllerPID = [[0, 0, 0],  # PID x
                                 [0, 0, 0],    # PID y
-                                [0, 0,  0]]  # PID z
+                                [0.97, 8.56, 7.05]]  # PID z
 
         '''
         ANSWER
@@ -79,12 +80,10 @@ class myPSO(object):
         
         controller = [attitudeControllerPID, positionControllerPID]
         controller[index[0]][index[1]] = [k[0], k[1], k[2]]
-
+        # print('pos controller', positionControllerPID)
         model = Quadrotor(0, "model", specs, initialState,
                           initialInput, attitudeControllerPID, positionControllerPID)
         
-        # print('state', model.position)
-
         targetAttitude = [0, 0, 0, 0]
         targetPosition = [0, 0, 1]
         target = [targetAttitude, targetPosition]
@@ -97,7 +96,7 @@ class myPSO(object):
             if(index[0] == 0):
                 model.controlAttitude(targetAttitude)
             else:
-                model.controlPosition(targetPosition)
+                model.controlPositionYaw(targetPosition, 0)
 
             model.updateState()
             response = {
@@ -109,8 +108,13 @@ class myPSO(object):
                 "y": model.position[1],
                 "z": model.position[2],
             }
+            # print('model position', model.position)
 
             if response.get(self.responseType) > 100 or response.get(self.responseType) < -100:
+                print(k)
+                print('moments', model.moments)
+                print('attitude', model.angles)
+                print('pos', model.position)
                 return responseValue, False
 
             responseValue.append(response.get(self.responseType, "nothing"))
@@ -322,6 +326,6 @@ class myPSO(object):
         plt.plot(self.simulationTime, bestResponse, label="Best Response")
         plt.plot(self.simulationTime, self.targetOutput *
                  np.ones(self.simulationTime.shape), label="Set Point", color="red")
-        plt.legend(loc='upper left')
+        plt.legend(loc='lower right')
         plt.show()
         plt.pause(100)

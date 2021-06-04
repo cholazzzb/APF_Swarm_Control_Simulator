@@ -3,7 +3,7 @@ import math
 
 radianToDegree = 180/math.pi
 
-# Specific for quadrotor
+# Specific for quadrotor modelled with PEM
 class Report(object):
     def __init__(self, Quadrotor):
         self.name = Quadrotor.name
@@ -32,13 +32,12 @@ class Report(object):
         self.theta_dot = [Quadrotor.angles_dot[1]*radianToDegree]
         self.psi_dot = [Quadrotor.angles_dot[2]*radianToDegree]
 
-        # Thrust and Moment
-        self.thrust = [Quadrotor.thrust]
-        self.moment1 = [Quadrotor.moments[0]]
-        self.moment2 = [Quadrotor.moments[1]]
-        self.moment3 = [Quadrotor.moments[2]]
+        self.inputT = [Quadrotor.inputT]
+        self.inputRoll = [Quadrotor.inputRoll]
+        self.inputPitch = [Quadrotor.inputPitch]
+        self.inputYaw = [Quadrotor.inputYaw]
 
-    def updateReport(self, newStates, thrust, moments):
+    def updateReport(self, newStates, newInput):
         self.t = self.t + self.dt
         self.xLabel.append(self.t)
 
@@ -63,11 +62,11 @@ class Report(object):
         self.theta_dot.append(newStates[3][1])
         self.psi_dot.append(newStates[3][2])
 
-        # Thrust and Moment
-        self.thrust.append(thrust)
-        self.moment1.append(moments[0])
-        self.moment2.append(moments[1])
-        self.moment3.append(moments[2])
+        # Input
+        self.inputT.append(newInput[0])
+        self.inputRoll.append(newInput[1])
+        self.inputPitch.append(newInput[2])
+        self.inputYaw.append(newInput[3])
 
     def generateReport(self):
         # Style
@@ -83,15 +82,15 @@ class Report(object):
         plt.ylabel('X (m)')
         plt.plot(self.xLabel, self.x)
 
-        plt.subplot(4, 4, 2)
+        plt.subplot(4, 4, 5)
         plt.ylabel('Y (m)')
         plt.plot(self.xLabel, self.y)
 
-        plt.subplot(4, 4, 3)
+        plt.subplot(4, 4, 9)
         plt.ylabel('Z (m)')
         plt.plot(self.xLabel, self.z)
 
-        plt.subplot(4, 4, 5)
+        plt.subplot(4, 4, 2)
         plt.ylabel('X dot (m)')
         plt.plot(self.xLabel, self.x_dot)
 
@@ -99,15 +98,15 @@ class Report(object):
         plt.ylabel('Y dot (m)')
         plt.plot(self.xLabel, self.y_dot)
 
-        plt.subplot(4, 4, 7)
+        plt.subplot(4, 4, 10)
         plt.ylabel('z dot(m/s)')
         plt.plot(self.xLabel, self.z_dot)
 
-        plt.subplot(4, 4, 9)
+        plt.subplot(4, 4, 3)
         plt.ylabel('phi(degree)')
         plt.plot(self.xLabel, self.phi)
 
-        plt.subplot(4, 4, 10)
+        plt.subplot(4, 4, 7)
         plt.ylabel('theta(degree)')
         plt.plot(self.xLabel, self.theta)
 
@@ -115,32 +114,32 @@ class Report(object):
         plt.ylabel('psi(degree)')
         plt.plot(self.xLabel, self.psi)
 
-        plt.subplot(4, 4, 13)
+        plt.subplot(4, 4, 4)
         plt.ylabel('phi dot(degree)')
         plt.plot(self.xLabel, self.phi_dot)
 
-        plt.subplot(4, 4, 14)
+        plt.subplot(4, 4, 8)
         plt.ylabel('theta dot(degree)')
         plt.plot(self.xLabel, self.theta_dot)
 
-        plt.subplot(4, 4, 15)
+        plt.subplot(4, 4, 12)
         plt.ylabel('psi dot(degree)')
         plt.plot(self.xLabel, self.psi_dot)
 
-        plt.subplot(4, 4, 4)
-        plt.ylabel('thrust')
-        plt.plot(self.xLabel, self.thrust)
+        plt.subplot(4, 4, 13)
+        plt.ylabel('inputT')
+        plt.plot(self.xLabel, self.inputT)
 
-        plt.subplot(4, 4, 8)
-        plt.ylabel('moment1')
-        plt.plot(self.xLabel, self.moment1)
+        plt.subplot(4, 4, 14)
+        plt.ylabel('inputRoll')
+        plt.plot(self.xLabel, self.inputRoll)
 
-        plt.subplot(4, 4, 12)
-        plt.ylabel('moment2')
-        plt.plot(self.xLabel, self.moment2)
+        plt.subplot(4, 4, 15)
+        plt.ylabel('inputPitch')
+        plt.plot(self.xLabel, self.inputPitch)
 
         plt.subplot(4, 4, 16)
-        plt.ylabel('moment3')
-        plt.plot(self.xLabel, self.moment3)
+        plt.ylabel('inputYaw')
+        plt.plot(self.xLabel, self.inputYaw)
 
         plt.show()

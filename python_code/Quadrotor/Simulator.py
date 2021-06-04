@@ -29,7 +29,7 @@ class Simulator(object):
         frontRotor = bodyPosition[0]
         otherRotors = bodyPosition[1]
         
-        plt.pause(0.01)
+        plt.pause(0.1)
         self.position._offsets3d = ([self.agent.position[0]], [self.agent.position[1]], [self.agent.position[2]])
         self.frontRotor._offsets3d = ([frontRotor[0]], [frontRotor[1]], [frontRotor[2]])
         self.otherRotors._offsets3d = (otherRotors[0], otherRotors[1], otherRotors[2])

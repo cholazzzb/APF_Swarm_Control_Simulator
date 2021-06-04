@@ -6,6 +6,7 @@ import math
 import sys
 sys.path.append('../')
 from Quadrotor import Quadrotor
+from QuadrotorPEM import QuadrotorPEM
 
 sys.path.append('../')
 from Agent import Agent
@@ -73,7 +74,7 @@ class myPSOModelling(object):
         controller = [attitudeControllerPID, positionControllerPID]
         controller[index[0]][index[1]] = [k[0], k[1], k[2]]
 
-        model = Quadrotor(0, "model", specs, initialState,
+        model = QuadrotorPEM(0, "model", specs, initialState,
                           initialInput, attitudeControllerPID, positionControllerPID)
         
         # print('state', model.position)

@@ -303,7 +303,6 @@ class Quadrotor(object):
 
     def controlPositionYaw(self, positionTarget, yawTarget):
         # print('---- POSITION CONTROLLER QUADROTOR- ', self.index, ' ----')
-
         # Yaw Control
         distanceVector = positionTarget - self.position
         distanceVal = math.sqrt(distanceVector[0]**2 + distanceVector[1]**2)
@@ -327,11 +326,13 @@ class Quadrotor(object):
         # print('distanceVectorQC', distanceVectorQC)
 
         attitudeTarget = [0.0, 0.0, 0.0, 0.0]
+        
         if abs(self.angles[2]*radianToDegree - yawTarget) < 5:
             ### Quad Coordinate (QC)
             quadPosQC = GTQM(-self.angles, self.position)
             targetPosQC = GTQM(-self.angles, positionTarget)
             distanceVectorQC = targetPosQC - quadPosQC
+
             self.x_err = distanceVectorQC[0]
             self.y_err = distanceVectorQC[1]
 
@@ -344,16 +345,13 @@ class Quadrotor(object):
             self.y_err_prev = self.y_err
             self.y_err_sum = self.y_err_sum + self.y_err
 
-            attitudeTarget[0] = attitudeTarget[0]
-
             attitudeTarget[1] = self.KP_x * self.x_err
             + self.KI_x * self.x_err_sum
             + self.KD_x * (self.x_err - self.x_err_prev) / self.dt
-       
+
+            # print('WOI', attitudeTarget[1])
             self.x_err_prev = self.x_err
             self.x_err_sum = self.x_err_sum + self.x_err
-
-            attitudeTarget[1] = attitudeTarget[1]
 
             if attitudeTarget[0] > self.max_phi_theta_psi:
                 attitudeTarget[0] = self.max_phi_theta_psi
@@ -370,6 +368,7 @@ class Quadrotor(object):
         if attitudeTarget[2] - self.angles[2] < -self.max_phi_theta_psi:
             attitudeTarget[2] = self.angles[2] - self.max_phi_theta_psi
        
+        self.z_err = distanceVectorQC[2]
         attitudeTarget[3] = self.KP_z * self.z_err
         + self.KI_z * self.z_err_sum
         + self.KD_z * (self.z_err - self.z_err_prev) / self.dt
@@ -378,8 +377,10 @@ class Quadrotor(object):
         self.z_err_sum = self.z_err_sum + self.z_err
 
         # print('Current Angles', np.round(np.array(self.angles)*radianToDegree, 2))
-        # print("ATTITUDE TARGET", np.array(attitudeTarget) * radianToDegree)
-        self.controlAttitude(np.array(attitudeTarget)*radianToDegree)
+        # print('z err', self.z_err)
+        # print("zdot target", attitudeTarget[3])
+        print('attitude target', attitudeTarget)
+        self.controlAttitude(np.array([attitudeTarget[0]*radianToDegree, attitudeTarget[1]*radianToDegree, attitudeTarget[2]*radianToDegree, attitudeTarget[3]]))
         # print()
 
     def controlPosition(self, positionTarget):

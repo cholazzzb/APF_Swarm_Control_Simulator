@@ -1,7 +1,9 @@
 # Attitude Controller
 
 dt = 1/15
-totalData = 15 (phi), 12? ....
+totalData = 15 (phi), 13 (theta), 15 (psi)
+
+initial and target z = 1
 
 1. Phi
 ## Output
@@ -27,8 +29,8 @@ cost_function = "integralAbsoluteError"
 
 ## Result
 Total iteration ->  100
-Best fitness ->  5.358276432955151
-Best parameter ->  [ 0.01  -0.001  0.007]
+Best fitness ->  5.296553433227793
+Best parameter ->  [-1.022  0.623  0.049]
 
 2. Theta
 ## Output
@@ -64,8 +66,8 @@ cost_function = "integralAbsoluteError"
 
 ## Result
 Total iteration ->  100
-Best fitness ->  5.224040635303442
-Best parameter ->  [ 0.022 -0.003  0.002]
+Best fitness ->  5.95170296701274
+Best parameter ->  [-0.142 -0.135  0.028]
 
 3. Psi
 ## Output
@@ -103,8 +105,8 @@ cost_function = "integralAbsoluteError"
 
 ## Result 
 Total iteration ->  100
-Best fitness ->  55.255738469129405
-Best parameter ->  [0.001 0.002 0.002]
+Best fitness ->  11.255567164385994
+Best parameter ->  [-0.044 -0.031 -0.079]
 
 4. zdot
 ## Setup
@@ -117,7 +119,7 @@ simulationTime = np.linspace(
     startTime, endTime, 1 + int((endTime-startTime)/dt))
 
 ## Output
-outputSetpoint = 0.5  # degree (angles), meter/second (velocity)
+outputSetpoint = 1  # degree (angles), meter/second (velocity)
 optimizeParameter = "zdot"
 
 ## PSO Parameter
@@ -134,8 +136,8 @@ cost_function = "integralAbsoluteError"
 
 ## Result
 Total iteration ->  100
-Best fitness ->  1.2133090361666734
-Best parameter ->  [5.01 4.01 0.  ]
+Best fitness ->  0.0002476760612999396
+Best parameter ->  [22.21 22.21  0.  ]
 
 # Position Controller
 1. z
@@ -146,12 +148,9 @@ dt = 1/15
 startTime = 0
 endTime = 5
 
-simulationTime = np.linspace(
-    startTime, endTime, 1 + int((endTime-startTime)/dt))
-
-initial pos = 0,0,0
 ## Output
-outputSetpoint = 1 # degree (angles), meter/second (velocity)
+initial pos = 0,0,0
+outputSetpoint = 1  # degree (angles), meter/second (velocity)
 optimizeParameter = "z"
 
 ## PSO Parameter
@@ -168,38 +167,9 @@ cost_function = "integralAbsoluteError"
 
 ## Result
 Total iteration ->  100
-Best fitness ->  15.522438207290469
-Best parameter ->  [0.97 8.56 7.05]
+Best fitness ->  1.9469987887586866
+Best parameter ->  [0.09 1.59 7.06]
 
 2. x
 
-## Setup
-## Time
-dt = 1/3
-startTime = 0Total iteration ->  100Total iteration ->  100
-Best fitness ->  1.1461562251788884
-Best parameter ->  [ 7.71  3.91 -0.06]
-
-Best fitness ->  1.1461562251788884
-Best parameter ->  [ 7.71  3.91 -0.06]
-
-endTime = 5
-Initial Position = 0,0,1 using attitude controller in 3data result
-
-## Output
-outputSetpoint = 1  # degree (angles), meter/second (velocity)
-optimizeParameter = "x"
-
-## PSO Parameter
-w = 0.72984
-c1 = 0.72984 * 2.05
-c2 = 0.72984 * 2.05
-number_of_particles = 30
-number_of_parameters = 3
-min_param_value = 0
-max_param_value = 10
-total_iteration = 100
-is_minimize = True
-cost_function = "integralAbsoluteError"
-
-## Result
+3. y
