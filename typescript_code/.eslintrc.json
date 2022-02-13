@@ -1,0 +1,9 @@
+{
+  "root": true,
+  "extends": ["prettier"],
+  "rules": {
+    "@typescript-eslint/ban-ts-comment": "off",
+    "eqeqeq": ["error", "always"],
+    "no-underscore-dangle": "off"
+  }
+}
